@@ -16,23 +16,18 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Calendar,
   Users,
   Clock,
   Save,
   CheckCircle,
-  Info,
   LogIn,
   LogOut,
 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
-
-// Configuración de Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { type Session } from "@supabase/supabase-js"; // Importa Session como type-only
+import LoginForm from "./components/LoginForm";
+import { supabase } from "./lib/supabase"; // Moveremos supabase a un archivo separado
 
 // Tipos
 interface GrupoDB {
@@ -56,11 +51,32 @@ interface HorarioUI {
   profesores: ProfesorDB[];
 }
 
+interface HorarioSupabase {
+  id: number;
+  dia_semana: string;
+  hora_inicio: string;
+  hora_fin: string;
+  grupos: { grupos: GrupoDB }[];
+  profesores: { profesores: ProfesorDB }[];
+}
+
 interface AtletaUI {
   id: number;
   nombre: string;
   apellido: string;
   grupo_id: number;
+  presente: boolean;
+}
+
+interface AtletaSupabase {
+  id: number;
+  nombre: string;
+  apellido: string;
+  grupo_id: number;
+}
+
+interface AsistenciaSupabase {
+  atleta_id: number;
   presente: boolean;
 }
 
@@ -75,16 +91,13 @@ export default function AttendanceTracker() {
   );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profesorId, setProfesorId] = useState<number | null>(null);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     content: string;
   } | null>(null);
   const [showLogin, setShowLogin] = useState(false);
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
   const initialLoadRef = useRef(true);
 
   // Verificar sesión al cargar
@@ -171,14 +184,16 @@ export default function AttendanceTracker() {
 
         if (error) throw error;
 
-        // Convertir a tipo HorarioUI
-        const formattedHorarios = horarios.map((horario: any) => ({
+        // Convertir a tipo HorarioUI usando conversión segura
+        const formattedHorarios = (
+          horarios as unknown as HorarioSupabase[]
+        ).map((horario) => ({
           id: horario.id,
           dia_semana: horario.dia_semana,
           hora_inicio: horario.hora_inicio,
           hora_fin: horario.hora_fin,
-          grupos: horario.grupos.map((g: any) => g.grupos),
-          profesores: horario.profesores.map((p: any) => p.profesores),
+          grupos: horario.grupos.map((g) => g.grupos),
+          profesores: horario.profesores.map((p) => p.profesores),
         }));
 
         setHorarios(formattedHorarios);
@@ -234,16 +249,18 @@ export default function AttendanceTracker() {
       if (asistenciasError) throw asistenciasError;
 
       // Combinar datos de atletas con asistencias
-      const atletasConAsistencia = atletasDelGrupo.map((atleta: any) => ({
-        id: atleta.id,
-        nombre: atleta.nombre,
-        apellido: atleta.apellido,
-        grupo_id: atleta.grupo_id,
-        presente:
-          asistenciasExistentes?.some(
-            (a: any) => a.atleta_id === atleta.id && a.presente
-          ) ?? false,
-      }));
+      const atletasConAsistencia = (atletasDelGrupo as AtletaSupabase[]).map(
+        (atleta) => ({
+          id: atleta.id,
+          nombre: atleta.nombre,
+          apellido: atleta.apellido,
+          grupo_id: atleta.grupo_id,
+          presente:
+            (asistenciasExistentes as AsistenciaSupabase[])?.some(
+              (a) => a.atleta_id === atleta.id && a.presente
+            ) ?? false,
+        })
+      );
 
       setAtletas(atletasConAsistencia);
     } catch (error) {
@@ -325,13 +342,21 @@ export default function AttendanceTracker() {
           atletas.filter((a) => a.presente).length
         } presentes`,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error guardando asistencias:", error);
 
       let errorMessage = "Error al guardar asistencias";
-      if (error.message.includes("violates row-level security policy")) {
-        errorMessage =
-          "Error de permisos: No tienes acceso para modificar estas asistencias";
+
+      // Manejo seguro de errores
+      if (error instanceof Error) {
+        if (error.message.includes("violates row-level security policy")) {
+          errorMessage =
+            "Error de permisos: No tienes acceso para modificar estas asistencias";
+        } else {
+          errorMessage = error.message;
+        }
+      } else if (typeof error === "string") {
+        errorMessage = error;
       }
 
       setMessage({
@@ -344,50 +369,6 @@ export default function AttendanceTracker() {
       setTimeout(() => setMessage(null), 5000);
     }
   }, [selectedHorario, atletas, selectedDate, profesorId]);
-
-  // Iniciar sesión como profesor
-  const handleLogin = async () => {
-    try {
-      setLoginLoading(true);
-      setMessage(null);
-
-      // Validar campos
-      if (!loginEmail || !loginPassword) {
-        throw new Error("Por favor completa ambos campos");
-      }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword,
-      });
-
-      if (error) {
-        // Manejar errores específicos
-        if (
-          error.status === 400 &&
-          error.message.includes("Invalid login credentials")
-        ) {
-          throw new Error(
-            "Credenciales inválidas. Verifica tu email y contraseña."
-          );
-        }
-        throw new Error(error.message || "Error al iniciar sesión");
-      }
-
-      setMessage({
-        type: "success",
-        content: "Sesión iniciada correctamente",
-      });
-    } catch (error: any) {
-      console.error("Error al iniciar sesión:", error);
-      setMessage({
-        type: "error",
-        content: error.message || "Error desconocido al iniciar sesión",
-      });
-    } finally {
-      setLoginLoading(false);
-    }
-  };
 
   // Cerrar sesión
   const handleLogout = async () => {
@@ -462,81 +443,15 @@ export default function AttendanceTracker() {
       {/* Pantalla de inicio de sesión */}
       {showLogin && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center gap-2">
-                <Users className="h-6 w-6" />
-                Inicio de Sesión
-              </CardTitle>
-              <CardDescription>
-                Ingresa como profesor para registrar asistencias
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <p className="text-center text-blue-800">
-                    <Info className="inline h-4 w-4 mr-2" />
-                    <strong>Credenciales de prueba:</strong>{" "}
-                    fernandoladera1211@gmail.com / password123
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Correo electrónico
-                    </label>
-                    <input
-                      type="email"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      placeholder="tu@email.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Contraseña
-                    </label>
-                    <input
-                      type="password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <Button
-                    onClick={handleLogin}
-                    disabled={loginLoading}
-                    className="flex items-center gap-2"
-                  >
-                    {loginLoading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>
-                    ) : (
-                      <>
-                        <LogIn className="h-4 w-4" />
-                        Iniciar sesión
-                      </>
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowLogin(false)}
-                    disabled={loginLoading}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <LoginForm
+            onCancel={() => setShowLogin(false)}
+            onLoginSuccess={() => {
+              setMessage({
+                type: "success",
+                content: "Sesión iniciada correctamente",
+              });
+            }}
+          />
         </div>
       )}
 
