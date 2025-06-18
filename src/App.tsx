@@ -1,110 +1,3 @@
-// // src/components/TestConnection.tsx
-// import { useEffect, useState } from "react";
-// import { supabase } from "./lib/supabase";
-// import type { Profesores } from "./lib/supabase";
-
-// const TestConnection = () => {
-//   const [profesores, setprofesores] = useState<Profesores[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-
-//   const testConnection = async () => {
-//     try {
-//       setLoading(true);
-//       setError(null);
-
-//       // 1. Verificar conexión con Supabase
-//       const { error: connectionError } = await supabase
-//         .from("profesores")
-//         .select("id")
-//         .limit(1);
-
-//       if (connectionError) throw new Error(connectionError.message);
-
-//       // 2. Leer todos los datos
-//       const { data, error: readError } = await supabase
-//         .from("profesores")
-//         .select("*")
-//         .order("nombre", { ascending: true });
-
-//       if (readError) throw new Error(readError.message);
-
-//       // 3. Manejar caso de datos vacíos
-//       if (!data || data.length === 0) {
-//         setprofesores([]);
-//         return;
-//       }
-
-//       setprofesores(data);
-//     } catch (err) {
-//       setError(err instanceof Error ? err.message : "Error desconocido");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   console.log(profesores);
-
-//   useEffect(() => {
-//     testConnection();
-//   }, []);
-
-//   if (loading) {
-//     return (
-//       <div className="p-4 bg-blue-50 rounded-lg">
-//         <p className="text-blue-700">Verificando conexión con Supabase...</p>
-//       </div>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <div className="p-4 bg-red-100 text-red-800 rounded-lg">
-//         <h3 className="font-bold">❌ Error de conexión</h3>
-//         <p>{error}</p>
-//         <button
-//           className="mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-//           onClick={testConnection}
-//         >
-//           Reintentar
-//         </button>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="p-4 bg-green-50 text-green-800 rounded-lg">
-//       <h3 className="font-bold">✅ Conexión exitosa con Supabase!</h3>
-
-//       <div className="mt-4">
-//         <p className="font-medium">
-//           {profesores.length > 0
-//             ? `Datos recuperados (${profesores.length} registros):`
-//             : "La tabla existe pero no contiene registros"}
-//         </p>
-
-//         {profesores.length > 0 && (
-//           <ul className="mt-2 space-y-2 max-h-60 overflow-y-auto">
-//             {profesores.map((member) => (
-//               <li
-//                 key={member.id}
-//                 className="bg-white p-3 rounded shadow-sm border border-gray-200"
-//               >
-//                 <div className="font-bold text-gray-800">{member.nombre}</div>
-//                 <div className="text-sm text-gray-600">{member.email}</div>
-//                 <div className="text-xs text-gray-400 mt-1">
-//                   ID: {member.id}
-//                 </div>
-//               </li>
-//             ))}
-//           </ul>
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default TestConnection;
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
@@ -124,7 +17,16 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, Users, Clock, Save, CheckCircle, Info } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  Clock,
+  Save,
+  CheckCircle,
+  Info,
+  LogIn,
+  LogOut,
+} from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 // Configuración de Supabase
@@ -132,7 +34,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Definimos tipos específicos para las respuestas de Supabase
+// Tipos
 interface GrupoDB {
   id: number;
   nombre: string;
@@ -142,34 +44,9 @@ interface GrupoDB {
 interface ProfesorDB {
   id: number;
   nombre: string;
+  user_id?: string;
 }
 
-interface RawHorarioDB {
-  id: number;
-  dia_semana: string;
-  hora_inicio: string;
-  hora_fin: string;
-  grupos: {
-    grupos: GrupoDB;
-  }[];
-  profesores: {
-    profesores: ProfesorDB;
-  }[];
-}
-
-interface AtletaDB {
-  id: number;
-  nombre: string;
-  apellido: string;
-  grupo_id: number;
-}
-
-interface AsistenciaDB {
-  atleta_id: number;
-  presente: boolean;
-}
-
-// Tipos para el componente
 interface HorarioUI {
   id: number;
   dia_semana: string;
@@ -198,13 +75,69 @@ export default function AttendanceTracker() {
   );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [profesorId, setProfesorId] = useState<number | null>(null);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     content: string;
   } | null>(null);
-
-  // Usamos useRef para rastrear si es la primera carga
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
   const initialLoadRef = useRef(true);
+
+  // Verificar sesión al cargar
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        fetchProfesorId(session.user.id);
+        setShowLogin(false);
+      } else {
+        setShowLogin(true);
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        if (session) {
+          fetchProfesorId(session.user.id);
+          setShowLogin(false);
+        } else {
+          setProfesorId(null);
+          setShowLogin(true);
+        }
+      }
+    );
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Obtener ID del profesor basado en user_id
+  const fetchProfesorId = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profesores")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setProfesorId(data.id);
+      }
+    } catch (error) {
+      console.error("Error obteniendo ID de profesor:", error);
+      setMessage({
+        type: "error",
+        content: "No se pudo obtener la información del profesor",
+      });
+    }
+  };
 
   // Obtener nombre del día en formato capitalizado
   const getDayName = useCallback((date: string) => {
@@ -213,9 +146,11 @@ export default function AttendanceTracker() {
       .replace(/^\w/, (c) => c.toUpperCase());
   }, []);
 
-  // Obtener horarios disponibles para el día seleccionado desde Supabase
+  // Obtener horarios disponibles para el día seleccionado
   useEffect(() => {
     const fetchHorarios = async () => {
+      if (!session) return;
+
       const dayName = getDayName(selectedDate);
 
       setLoading(true);
@@ -236,19 +171,15 @@ export default function AttendanceTracker() {
 
         if (error) throw error;
 
-        // Convertir a tipo HorarioUI usando tipo intermedio
-        const formattedHorarios = horarios.map((horario) => {
-          const rawHorario = horario as unknown as RawHorarioDB;
-
-          return {
-            id: rawHorario.id,
-            dia_semana: rawHorario.dia_semana,
-            hora_inicio: rawHorario.hora_inicio,
-            hora_fin: rawHorario.hora_fin,
-            grupos: rawHorario.grupos.map((g) => g.grupos),
-            profesores: rawHorario.profesores.map((p) => p.profesores),
-          };
-        });
+        // Convertir a tipo HorarioUI
+        const formattedHorarios = horarios.map((horario: any) => ({
+          id: horario.id,
+          dia_semana: horario.dia_semana,
+          hora_inicio: horario.hora_inicio,
+          hora_fin: horario.hora_fin,
+          grupos: horario.grupos.map((g: any) => g.grupos),
+          profesores: horario.profesores.map((p: any) => p.profesores),
+        }));
 
         setHorarios(formattedHorarios);
 
@@ -270,12 +201,14 @@ export default function AttendanceTracker() {
       }
     };
 
-    fetchHorarios();
-  }, [selectedDate, getDayName]);
+    if (session) {
+      fetchHorarios();
+    }
+  }, [selectedDate, getDayName, session]);
 
   // Obtener atletas cuando se selecciona un horario
   const fetchAtletas = useCallback(async () => {
-    if (!selectedHorario) return;
+    if (!selectedHorario || !session || !profesorId) return;
 
     setLoading(true);
     try {
@@ -295,23 +228,22 @@ export default function AttendanceTracker() {
           .from("asistencias")
           .select("atleta_id, presente")
           .eq("fecha", selectedDate)
-          .eq("horario_id", selectedHorario.id);
+          .eq("horario_id", selectedHorario.id)
+          .eq("profesor_id", profesorId);
 
       if (asistenciasError) throw asistenciasError;
 
       // Combinar datos de atletas con asistencias
-      const atletasConAsistencia = (atletasDelGrupo as AtletaDB[]).map(
-        (atleta) => ({
-          id: atleta.id,
-          nombre: atleta.nombre,
-          apellido: atleta.apellido,
-          grupo_id: atleta.grupo_id,
-          presente:
-            (asistenciasExistentes as AsistenciaDB[])?.some(
-              (a) => a.atleta_id === atleta.id && a.presente
-            ) ?? false,
-        })
-      );
+      const atletasConAsistencia = atletasDelGrupo.map((atleta: any) => ({
+        id: atleta.id,
+        nombre: atleta.nombre,
+        apellido: atleta.apellido,
+        grupo_id: atleta.grupo_id,
+        presente:
+          asistenciasExistentes?.some(
+            (a: any) => a.atleta_id === atleta.id && a.presente
+          ) ?? false,
+      }));
 
       setAtletas(atletasConAsistencia);
     } catch (error) {
@@ -323,7 +255,7 @@ export default function AttendanceTracker() {
     } finally {
       setLoading(false);
     }
-  }, [selectedHorario, selectedDate]);
+  }, [selectedHorario, selectedDate, session, profesorId]);
 
   useEffect(() => {
     if (selectedHorario) {
@@ -347,13 +279,28 @@ export default function AttendanceTracker() {
   };
 
   const guardarAsistencias = useCallback(async () => {
-    if (!selectedHorario || atletas.length === 0) return;
+    if (!selectedHorario || atletas.length === 0 || !profesorId) {
+      setMessage({
+        type: "error",
+        content: "Faltan datos para guardar asistencias",
+      });
+      return;
+    }
+
+    // Verificar que el profesor está asignado a este horario
+    const profesorAsignado = selectedHorario.profesores.some(
+      (p) => p.id === profesorId
+    );
+    if (!profesorAsignado) {
+      setMessage({
+        type: "error",
+        content: "No estás asignado a este horario",
+      });
+      return;
+    }
 
     setSaving(true);
     try {
-      const profesorId = selectedHorario.profesores[0]?.id;
-      if (!profesorId) throw new Error("Profesor no asignado");
-
       // Preparar datos para Supabase
       const asistenciasData = atletas.map((atleta) => ({
         fecha: selectedDate,
@@ -378,13 +325,13 @@ export default function AttendanceTracker() {
           atletas.filter((a) => a.presente).length
         } presentes`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error guardando asistencias:", error);
 
-      // Mensaje más específico del error
       let errorMessage = "Error al guardar asistencias";
-      if (error instanceof Error) {
-        errorMessage = error.message;
+      if (error.message.includes("violates row-level security policy")) {
+        errorMessage =
+          "Error de permisos: No tienes acceso para modificar estas asistencias";
       }
 
       setMessage({
@@ -393,224 +340,449 @@ export default function AttendanceTracker() {
       });
     } finally {
       setSaving(false);
-      // Limpiar mensaje después de 3 segundos
-      setTimeout(() => setMessage(null), 3000);
+      // Limpiar el mensaje después de 5 segundos
+      setTimeout(() => setMessage(null), 5000);
     }
-  }, [selectedHorario, atletas, selectedDate]);
+  }, [selectedHorario, atletas, selectedDate, profesorId]);
+
+  // Iniciar sesión como profesor
+  const handleLogin = async () => {
+    try {
+      setLoginLoading(true);
+      setMessage(null);
+
+      // Validar campos
+      if (!loginEmail || !loginPassword) {
+        throw new Error("Por favor completa ambos campos");
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+
+      if (error) {
+        // Manejar errores específicos
+        if (
+          error.status === 400 &&
+          error.message.includes("Invalid login credentials")
+        ) {
+          throw new Error(
+            "Credenciales inválidas. Verifica tu email y contraseña."
+          );
+        }
+        throw new Error(error.message || "Error al iniciar sesión");
+      }
+
+      setMessage({
+        type: "success",
+        content: "Sesión iniciada correctamente",
+      });
+    } catch (error: any) {
+      console.error("Error al iniciar sesión:", error);
+      setMessage({
+        type: "error",
+        content: error.message || "Error desconocido al iniciar sesión",
+      });
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  // Cerrar sesión
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      setMessage({
+        type: "success",
+        content: "Sesión cerrada correctamente",
+      });
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      setMessage({
+        type: "error",
+        content: "Ocurrió un error al cerrar sesión",
+      });
+    }
+  };
 
   const atletasPresentes = atletas.filter((a) => a.presente).length;
   const totalAtletas = atletas.length;
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+    <div className="min-h-screen bg-gray-50">
+      {/* Mostrar mensajes flotantes */}
+      {message && (
+        <div
+          className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${
+            message.type === "success" ? "bg-green-500" : "bg-red-500"
+          } text-white max-w-md transition-all duration-300`}
+        >
+          {message.content}
+        </div>
+      )}
+
+      {/* Barra superior */}
+      <header className="bg-blue-600 text-white p-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
             <Users className="h-6 w-6" />
-            Control de Asistencias - Club de Natación
-          </CardTitle>
-          <CardDescription>
-            Registra la asistencia diaria de los atletas
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          {/* Mensajes de estado */}
-          {message && (
-            <Alert
-              variant={message.type === "success" ? "default" : "destructive"}
-            >
-              <AlertDescription>{message.content}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Alerta informativa */}
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Versión Conectada a Supabase:</strong> Esta aplicación
-              ahora se conecta a una base de datos real para gestionar
-              asistencias.
-            </AlertDescription>
-          </Alert>
-
-          {/* Controles de fecha y horario */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-5 w-5 flex-shrink-0" />
-              <div className="w-full">
-                <label className="block text-sm font-medium mb-1">Fecha</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {horarios.length > 0 ? (
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 flex-shrink-0" />
-                <div className="w-full">
-                  <label className="block text-sm font-medium mb-1">
-                    Horario
-                  </label>
-                  <Select
-                    value={selectedHorario?.id.toString() || ""}
-                    onValueChange={(value) => {
-                      const horario = horarios.find(
-                        (h) => h.id.toString() === value
-                      );
-                      setSelectedHorario(horario || null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un horario" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {horarios.map((horario) => (
-                        <SelectItem
-                          key={horario.id}
-                          value={horario.id.toString()}
-                        >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">
-                              {horario.hora_inicio} - {horario.hora_fin}
-                            </span>
-                            <Badge variant="secondary">
-                              {horario.grupos.map((g) => g.nombre).join(", ")}
-                            </Badge>
-                            <Badge variant="outline">
-                              {horario.profesores
-                                .map((p) => p.nombre)
-                                .join(", ")}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 flex-shrink-0" />
-                <div className="w-full">
-                  <label className="block text-sm font-medium mb-1">
-                    Horario
-                  </label>
-                  <Select disabled value="">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Cargando horarios..." />
-                    </SelectTrigger>
-                  </Select>
-                </div>
-              </div>
-            )}
+            <h1 className="text-xl font-bold">Control de Asistencias</h1>
           </div>
 
-          {/* Lista de atletas */}
-          {selectedHorario ? (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h3 className="text-lg font-semibold">
-                  {selectedHorario.grupos
-                    .map((g) => `${g.nombre} (${g.nivel})`)
-                    .join(", ")}
-                </h3>
+          {session ? (
+            <div className="flex items-center gap-4">
+              <span className="text-sm hidden sm:inline">
+                {session.user.email}
+              </span>
+              <Button
+                variant="outline"
+                className="text-white border-white hover:bg-blue-700 flex items-center gap-2"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Cerrar sesión</span>
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              className="text-white border-white hover:bg-blue-700 flex items-center gap-2"
+              onClick={() => setShowLogin(true)}
+            >
+              <LogIn className="h-4 w-4" />
+              <span className="hidden sm:inline">Iniciar sesión</span>
+            </Button>
+          )}
+        </div>
+      </header>
 
-                <div className="flex flex-wrap items-center gap-3">
+      {/* Pantalla de inicio de sesión */}
+      {showLogin && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center gap-2">
+                <Users className="h-6 w-6" />
+                Inicio de Sesión
+              </CardTitle>
+              <CardDescription>
+                Ingresa como profesor para registrar asistencias
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <p className="text-center text-blue-800">
+                    <Info className="inline h-4 w-4 mr-2" />
+                    <strong>Credenciales de prueba:</strong>{" "}
+                    fernandoladera1211@gmail.com / password123
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Correo electrónico
+                    </label>
+                    <input
+                      type="email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="tu@email.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Contraseña
+                    </label>
+                    <input
+                      type="password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <Button
+                    onClick={handleLogin}
+                    disabled={loginLoading}
+                    className="flex items-center gap-2"
+                  >
+                    {loginLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>
+                    ) : (
+                      <>
+                        <LogIn className="h-4 w-4" />
+                        Iniciar sesión
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowLogin(false)}
+                    disabled={loginLoading}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Contenido principal */}
+      <main className="container mx-auto p-6 max-w-4xl">
+        {session ? (
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-6 w-6" />
+                    Club de Natación
+                  </CardTitle>
+                  <CardDescription>
+                    Registra la asistencia diaria de los atletas
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    Profesor ID: {profesorId || "Cargando..."}
+                  </Badge>
+
+                  {/* Botón para cerrar sesión dentro de la tarjeta */}
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={toggleAllAsistencias}
+                    onClick={handleLogout}
                     className="flex items-center gap-2"
                   >
-                    <CheckCircle className="h-4 w-4" />
-                    {atletas.every((a) => a.presente)
-                      ? "Desmarcar todos"
-                      : "Marcar todos"}
+                    <LogOut className="h-4 w-4" />
+                    <span>Cerrar sesión</span>
                   </Button>
-
-                  <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm">
-                      {atletasPresentes}/{totalAtletas} presentes
-                    </span>
-                  </div>
                 </div>
               </div>
+            </CardHeader>
 
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Cargando atletas...</p>
+            <CardContent className="space-y-6">
+              {/* Controles de fecha y horario */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 flex-shrink-0" />
+                  <div className="w-full">
+                    <label className="block text-sm font-medium mb-1">
+                      Fecha
+                    </label>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
-              ) : atletas.length > 0 ? (
-                <>
-                  <div className="grid gap-2">
-                    {atletas.map((atleta) => (
-                      <div
-                        key={atleta.id}
-                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                          atleta.presente
-                            ? "bg-green-50 border-green-200"
-                            : "bg-gray-50 border-gray-200"
-                        }`}
+
+                {horarios.length > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 flex-shrink-0" />
+                    <div className="w-full">
+                      <label className="block text-sm font-medium mb-1">
+                        Horario
+                      </label>
+                      <Select
+                        value={selectedHorario?.id.toString() || ""}
+                        onValueChange={(value) => {
+                          const horario = horarios.find(
+                            (h) => h.id.toString() === value
+                          );
+                          setSelectedHorario(horario || null);
+                        }}
                       >
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            id={`atleta-${atleta.id}`}
-                            checked={atleta.presente}
-                            onCheckedChange={() => toggleAsistencia(atleta.id)}
-                          />
-                          <label
-                            htmlFor={`atleta-${atleta.id}`}
-                            className="text-sm font-medium cursor-pointer"
-                          >
-                            {atleta.nombre} {atleta.apellido}
-                          </label>
-                        </div>
-                        <Badge
-                          variant={atleta.presente ? "default" : "secondary"}
-                          className="px-2 py-0.5"
-                        >
-                          {atleta.presente ? "Presente" : "Ausente"}
-                        </Badge>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un horario" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {horarios.map((horario) => (
+                            <SelectItem
+                              key={horario.id}
+                              value={horario.id.toString()}
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium">
+                                  {horario.hora_inicio} - {horario.hora_fin}
+                                </span>
+                                <Badge variant="secondary">
+                                  {horario.grupos
+                                    .map((g) => g.nombre)
+                                    .join(", ")}
+                                </Badge>
+                                <Badge variant="outline">
+                                  {horario.profesores
+                                    .map((p) => p.nombre)
+                                    .join(", ")}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 flex-shrink-0" />
+                    <div className="w-full">
+                      <label className="block text-sm font-medium mb-1">
+                        Horario
+                      </label>
+                      <Select disabled value="">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Cargando horarios..." />
+                        </SelectTrigger>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Lista de atletas */}
+              {selectedHorario ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold">
+                      {selectedHorario.grupos
+                        .map((g) => `${g.nombre} (${g.nivel})`)
+                        .join(", ")}
+                    </h3>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleAllAsistencias}
+                        className="flex items-center gap-2"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        {atletas.every((a) => a.presente)
+                          ? "Desmarcar todos"
+                          : "Marcar todos"}
+                      </Button>
+
+                      <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-sm">
+                          {atletasPresentes}/{totalAtletas} presentes
+                        </span>
                       </div>
-                    ))}
+                    </div>
                   </div>
 
-                  <div className="flex justify-end pt-2">
-                    <Button
-                      onClick={guardarAsistencias}
-                      disabled={saving}
-                      className="flex items-center gap-2"
-                    >
-                      <Save className="h-4 w-4" />
-                      {saving ? "Guardando..." : "Guardar Asistencias"}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-6 text-gray-500">
-                  <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p>No hay atletas registrados en este grupo</p>
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="mt-2 text-gray-600">Cargando atletas...</p>
+                    </div>
+                  ) : atletas.length > 0 ? (
+                    <>
+                      <div className="grid gap-2">
+                        {atletas.map((atleta) => (
+                          <div
+                            key={atleta.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                              atleta.presente
+                                ? "bg-green-50 border-green-200"
+                                : "bg-gray-50 border-gray-200"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <Checkbox
+                                id={`atleta-${atleta.id}`}
+                                checked={atleta.presente}
+                                onCheckedChange={() =>
+                                  toggleAsistencia(atleta.id)
+                                }
+                              />
+                              <label
+                                htmlFor={`atleta-${atleta.id}`}
+                                className="text-sm font-medium cursor-pointer"
+                              >
+                                {atleta.nombre} {atleta.apellido}
+                              </label>
+                            </div>
+                            <Badge
+                              variant={
+                                atleta.presente ? "default" : "secondary"
+                              }
+                              className="px-2 py-0.5"
+                            >
+                              {atleta.presente ? "Presente" : "Ausente"}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <Button
+                          onClick={guardarAsistencias}
+                          disabled={saving}
+                          className="flex items-center gap-2"
+                        >
+                          <Save className="h-4 w-4" />
+                          {saving ? "Guardando..." : "Guardar Asistencias"}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p>No hay atletas registrados en este grupo</p>
+                    </div>
+                  )}
                 </div>
+              ) : (
+                horarios.length === 0 &&
+                !loading && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No hay horarios programados para esta fecha</p>
+                  </div>
+                )
               )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="text-center py-20">
+            <div className="max-w-md mx-auto">
+              <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Control de Asistencias
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Inicia sesión como profesor para registrar las asistencias
+                diarias
+              </p>
+              <Button
+                size="lg"
+                className="flex items-center gap-2 mx-auto"
+                onClick={() => setShowLogin(true)}
+              >
+                <LogIn className="h-5 w-5" />
+                Iniciar sesión
+              </Button>
             </div>
-          ) : (
-            horarios.length === 0 &&
-            !loading && (
-              <div className="text-center py-8 text-gray-500">
-                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No hay horarios programados para esta fecha</p>
-              </div>
-            )
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
