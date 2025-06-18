@@ -1,6 +1,111 @@
-"use client";
+// // src/components/TestConnection.tsx
+// import { useEffect, useState } from "react";
+// import { supabase } from "./lib/supabase";
+// import type { Profesores } from "./lib/supabase";
 
-import { useState } from "react";
+// const TestConnection = () => {
+//   const [profesores, setprofesores] = useState<Profesores[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+
+//   const testConnection = async () => {
+//     try {
+//       setLoading(true);
+//       setError(null);
+
+//       // 1. Verificar conexión con Supabase
+//       const { error: connectionError } = await supabase
+//         .from("profesores")
+//         .select("id")
+//         .limit(1);
+
+//       if (connectionError) throw new Error(connectionError.message);
+
+//       // 2. Leer todos los datos
+//       const { data, error: readError } = await supabase
+//         .from("profesores")
+//         .select("*")
+//         .order("nombre", { ascending: true });
+
+//       if (readError) throw new Error(readError.message);
+
+//       // 3. Manejar caso de datos vacíos
+//       if (!data || data.length === 0) {
+//         setprofesores([]);
+//         return;
+//       }
+
+//       setprofesores(data);
+//     } catch (err) {
+//       setError(err instanceof Error ? err.message : "Error desconocido");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   console.log(profesores);
+
+//   useEffect(() => {
+//     testConnection();
+//   }, []);
+
+//   if (loading) {
+//     return (
+//       <div className="p-4 bg-blue-50 rounded-lg">
+//         <p className="text-blue-700">Verificando conexión con Supabase...</p>
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="p-4 bg-red-100 text-red-800 rounded-lg">
+//         <h3 className="font-bold">❌ Error de conexión</h3>
+//         <p>{error}</p>
+//         <button
+//           className="mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+//           onClick={testConnection}
+//         >
+//           Reintentar
+//         </button>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="p-4 bg-green-50 text-green-800 rounded-lg">
+//       <h3 className="font-bold">✅ Conexión exitosa con Supabase!</h3>
+
+//       <div className="mt-4">
+//         <p className="font-medium">
+//           {profesores.length > 0
+//             ? `Datos recuperados (${profesores.length} registros):`
+//             : "La tabla existe pero no contiene registros"}
+//         </p>
+
+//         {profesores.length > 0 && (
+//           <ul className="mt-2 space-y-2 max-h-60 overflow-y-auto">
+//             {profesores.map((member) => (
+//               <li
+//                 key={member.id}
+//                 className="bg-white p-3 rounded shadow-sm border border-gray-200"
+//               >
+//                 <div className="font-bold text-gray-800">{member.nombre}</div>
+//                 <div className="text-sm text-gray-600">{member.email}</div>
+//                 <div className="text-xs text-gray-400 mt-1">
+//                   ID: {member.id}
+//                 </div>
+//               </li>
+//             ))}
+//           </ul>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default TestConnection;
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -8,11 +113,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -20,631 +121,496 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Calendar,
-  Users,
-  Clock,
-  TrendingUp,
-  CheckCircle,
-  XCircle,
-  Search,
-} from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calendar, Users, Clock, Save, CheckCircle, Info } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 
-// Datos de ejemplo basados en el SQL
-const grupos = [
-  {
-    id: 1,
-    nombre: "Delfines",
-    nivel: "Principiante",
-    color: "bg-blue-100 text-blue-800",
-  },
-  {
-    id: 2,
-    nombre: "Tiburones",
-    nivel: "Intermedio",
-    color: "bg-green-100 text-green-800",
-  },
-  {
-    id: 3,
-    nombre: "Orcas",
-    nivel: "Avanzado",
-    color: "bg-purple-100 text-purple-800",
-  },
-  {
-    id: 4,
-    nombre: "Ballenas",
-    nivel: "Adultos",
-    color: "bg-orange-100 text-orange-800",
-  },
-  {
-    id: 5,
-    nombre: "Focas",
-    nivel: "Infantil",
-    color: "bg-pink-100 text-pink-800",
-  },
-];
+// Configuración de Supabase
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-const profesores = [
-  { id: 1, nombre: "Fernando Ladera", email: "fernandoladera1211@gmail.com" },
-  { id: 2, nombre: "Laura Torres", email: "laura@clubnatacion.com" },
-  { id: 3, nombre: "Miguel Ángel Soto", email: "miguel@clubnatacion.com" },
-];
+// Definimos tipos específicos para las respuestas de Supabase
+interface GrupoDB {
+  id: number;
+  nombre: string;
+  nivel: string;
+}
 
-const atletas = [
-  { id: 1, nombre: "Juan García", grupo: "Delfines", asistencia: 85 },
-  { id: 2, nombre: "María López", grupo: "Delfines", asistencia: 92 },
-  { id: 3, nombre: "Pedro Martínez", grupo: "Delfines", asistencia: 78 },
-  { id: 4, nombre: "Ana Rodríguez", grupo: "Tiburones", asistencia: 88 },
-  { id: 5, nombre: "Luis Fernández", grupo: "Tiburones", asistencia: 95 },
-  { id: 6, nombre: "Sofía González", grupo: "Tiburones", asistencia: 82 },
-  { id: 7, nombre: "Carlos Pérez", grupo: "Orcas", asistencia: 90 },
-  { id: 8, nombre: "Laura Sánchez", grupo: "Orcas", asistencia: 87 },
-  { id: 9, nombre: "Miguel Ramírez", grupo: "Orcas", asistencia: 93 },
-  { id: 10, nombre: "Elena Torres", grupo: "Ballenas", asistencia: 89 },
-  { id: 11, nombre: "Javier Díaz", grupo: "Ballenas", asistencia: 91 },
-  { id: 12, nombre: "Carmen Ruiz", grupo: "Ballenas", asistencia: 86 },
-  { id: 13, nombre: "David Hernández", grupo: "Focas", asistencia: 94 },
-  { id: 14, nombre: "Isabel Jiménez", grupo: "Focas", asistencia: 88 },
-  { id: 15, nombre: "Francisco Moreno", grupo: "Focas", asistencia: 92 },
-];
+interface ProfesorDB {
+  id: number;
+  nombre: string;
+}
 
-const horarios = [
-  {
-    id: 1,
-    dia: "Lunes",
-    hora: "08:00-10:00",
-    grupo: "Delfines",
-    profesor: "Fernando Ladera",
-  },
-  {
-    id: 2,
-    dia: "Lunes",
-    hora: "16:00-18:00",
-    grupo: "Tiburones",
-    profesor: "Laura Torres",
-  },
-  {
-    id: 3,
-    dia: "Martes",
-    hora: "09:00-11:00",
-    grupo: "Orcas",
-    profesor: "Laura Torres",
-  },
-  {
-    id: 4,
-    dia: "Miércoles",
-    hora: "08:30-10:30",
-    grupo: "Focas",
-    profesor: "Fernando Ladera",
-  },
-  {
-    id: 5,
-    dia: "Jueves",
-    hora: "17:00-19:00",
-    grupo: "Ballenas",
-    profesor: "Laura Torres",
-  },
-  {
-    id: 6,
-    dia: "Viernes",
-    hora: "15:00-17:00",
-    grupo: "Tiburones",
-    profesor: "Miguel Ángel Soto",
-  },
-  {
-    id: 7,
-    dia: "Sábado",
-    hora: "10:00-12:00",
-    grupo: "Orcas",
-    profesor: "Miguel Ángel Soto",
-  },
-];
+interface RawHorarioDB {
+  id: number;
+  dia_semana: string;
+  hora_inicio: string;
+  hora_fin: string;
+  grupos: {
+    grupos: GrupoDB;
+  }[];
+  profesores: {
+    profesores: ProfesorDB;
+  }[];
+}
 
-export default function SwimmingAttendance() {
-  const [selectedGroup, setSelectedGroup] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
+interface AtletaDB {
+  id: number;
+  nombre: string;
+  apellido: string;
+  grupo_id: number;
+}
+
+interface AsistenciaDB {
+  atleta_id: number;
+  presente: boolean;
+}
+
+// Tipos para el componente
+interface HorarioUI {
+  id: number;
+  dia_semana: string;
+  hora_inicio: string;
+  hora_fin: string;
+  grupos: GrupoDB[];
+  profesores: ProfesorDB[];
+}
+
+interface AtletaUI {
+  id: number;
+  nombre: string;
+  apellido: string;
+  grupo_id: number;
+  presente: boolean;
+}
+
+export default function AttendanceTracker() {
+  const [horarios, setHorarios] = useState<HorarioUI[]>([]);
+  const [selectedHorario, setSelectedHorario] = useState<HorarioUI | null>(
+    null
+  );
+  const [atletas, setAtletas] = useState<AtletaUI[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    content: string;
+  } | null>(null);
 
-  const filteredAtletas = atletas.filter((atleta) => {
-    const matchesGroup =
-      selectedGroup === "all" || atleta.grupo === selectedGroup;
-    const matchesSearch = atleta.nombre
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    return matchesGroup && matchesSearch;
-  });
+  // Usamos useRef para rastrear si es la primera carga
+  const initialLoadRef = useRef(true);
 
-  const getGrupoColor = (grupoNombre: string) => {
-    const grupo = grupos.find((g) => g.nombre === grupoNombre);
-    return grupo?.color || "bg-gray-100 text-gray-800";
+  // Obtener nombre del día en formato capitalizado
+  const getDayName = useCallback((date: string) => {
+    return new Date(date + "T00:00:00")
+      .toLocaleDateString("es-ES", { weekday: "long" })
+      .replace(/^\w/, (c) => c.toUpperCase());
+  }, []);
+
+  // Obtener horarios disponibles para el día seleccionado desde Supabase
+  useEffect(() => {
+    const fetchHorarios = async () => {
+      const dayName = getDayName(selectedDate);
+
+      setLoading(true);
+      try {
+        const { data: horarios, error } = await supabase
+          .from("horarios")
+          .select(
+            `
+            id,
+            dia_semana,
+            hora_inicio,
+            hora_fin,
+            grupos:horarios_grupos ( grupos (id, nombre, nivel) ),
+            profesores:profesores_horarios ( profesores (id, nombre) )
+          `
+          )
+          .eq("dia_semana", dayName);
+
+        if (error) throw error;
+
+        // Convertir a tipo HorarioUI usando tipo intermedio
+        const formattedHorarios = horarios.map((horario) => {
+          const rawHorario = horario as unknown as RawHorarioDB;
+
+          return {
+            id: rawHorario.id,
+            dia_semana: rawHorario.dia_semana,
+            hora_inicio: rawHorario.hora_inicio,
+            hora_fin: rawHorario.hora_fin,
+            grupos: rawHorario.grupos.map((g) => g.grupos),
+            profesores: rawHorario.profesores.map((p) => p.profesores),
+          };
+        });
+
+        setHorarios(formattedHorarios);
+
+        // Solo resetear la selección si no es la primera carga
+        if (!initialLoadRef.current) {
+          setSelectedHorario(null);
+          setAtletas([]);
+        } else {
+          initialLoadRef.current = false;
+        }
+      } catch (error) {
+        console.error("Error cargando horarios:", error);
+        setMessage({
+          type: "error",
+          content: "Error al cargar horarios",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHorarios();
+  }, [selectedDate, getDayName]);
+
+  // Obtener atletas cuando se selecciona un horario
+  const fetchAtletas = useCallback(async () => {
+    if (!selectedHorario) return;
+
+    setLoading(true);
+    try {
+      const grupoIds = selectedHorario.grupos.map((g) => g.id);
+
+      // Obtener atletas de los grupos desde Supabase
+      const { data: atletasDelGrupo, error: atletasError } = await supabase
+        .from("atletas")
+        .select("id, nombre, apellido, grupo_id")
+        .in("grupo_id", grupoIds);
+
+      if (atletasError) throw atletasError;
+
+      // Obtener asistencias existentes desde Supabase
+      const { data: asistenciasExistentes, error: asistenciasError } =
+        await supabase
+          .from("asistencias")
+          .select("atleta_id, presente")
+          .eq("fecha", selectedDate)
+          .eq("horario_id", selectedHorario.id);
+
+      if (asistenciasError) throw asistenciasError;
+
+      // Combinar datos de atletas con asistencias
+      const atletasConAsistencia = (atletasDelGrupo as AtletaDB[]).map(
+        (atleta) => ({
+          id: atleta.id,
+          nombre: atleta.nombre,
+          apellido: atleta.apellido,
+          grupo_id: atleta.grupo_id,
+          presente:
+            (asistenciasExistentes as AsistenciaDB[])?.some(
+              (a) => a.atleta_id === atleta.id && a.presente
+            ) ?? false,
+        })
+      );
+
+      setAtletas(atletasConAsistencia);
+    } catch (error) {
+      console.error("Error cargando atletas:", error);
+      setMessage({
+        type: "error",
+        content: "No se pudieron cargar los atletas",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedHorario, selectedDate]);
+
+  useEffect(() => {
+    if (selectedHorario) {
+      fetchAtletas();
+    }
+  }, [selectedHorario, selectedDate, fetchAtletas]);
+
+  const toggleAsistencia = (atletaId: number) => {
+    setAtletas((prev) =>
+      prev.map((atleta) =>
+        atleta.id === atletaId
+          ? { ...atleta, presente: !atleta.presente }
+          : atleta
+      )
+    );
   };
 
-  const getAsistenciaColor = (porcentaje: number) => {
-    if (porcentaje >= 90) return "text-green-600";
-    if (porcentaje >= 80) return "text-yellow-600";
-    return "text-red-600";
+  const toggleAllAsistencias = () => {
+    const allPresent = atletas.every((a) => a.presente);
+    setAtletas((prev) => prev.map((a) => ({ ...a, presente: !allPresent })));
   };
+
+  const guardarAsistencias = useCallback(async () => {
+    if (!selectedHorario || atletas.length === 0) return;
+
+    setSaving(true);
+    try {
+      const profesorId = selectedHorario.profesores[0]?.id;
+      if (!profesorId) throw new Error("Profesor no asignado");
+
+      // Preparar datos para Supabase
+      const asistenciasData = atletas.map((atleta) => ({
+        fecha: selectedDate,
+        horario_id: selectedHorario.id,
+        profesor_id: profesorId,
+        atleta_id: atleta.id,
+        presente: atleta.presente,
+      }));
+
+      // Usar upsert para actualizar o insertar asistencias
+      const { error } = await supabase
+        .from("asistencias")
+        .upsert(asistenciasData, {
+          onConflict: "fecha,horario_id,atleta_id",
+        });
+
+      if (error) throw error;
+
+      setMessage({
+        type: "success",
+        content: `Asistencias guardadas: ${
+          atletas.filter((a) => a.presente).length
+        } presentes`,
+      });
+    } catch (error) {
+      console.error("Error guardando asistencias:", error);
+
+      // Mensaje más específico del error
+      let errorMessage = "Error al guardar asistencias";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      setMessage({
+        type: "error",
+        content: errorMessage,
+      });
+    } finally {
+      setSaving(false);
+      // Limpiar mensaje después de 3 segundos
+      setTimeout(() => setMessage(null), 3000);
+    }
+  }, [selectedHorario, atletas, selectedDate]);
+
+  const atletasPresentes = atletas.filter((a) => a.presente).length;
+  const totalAtletas = atletas.length;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Sistema de Asistencia - Club de Natación
-          </h1>
-          <p className="text-gray-600">
-            Gestión completa de asistencia para atletas y profesores
-          </p>
-        </div>
+    <div className="container mx-auto p-6 max-w-4xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-6 w-6" />
+            Control de Asistencias - Club de Natación
+          </CardTitle>
+          <CardDescription>
+            Registra la asistencia diaria de los atletas
+          </CardDescription>
+        </CardHeader>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="attendance">Asistencia</TabsTrigger>
-            <TabsTrigger value="athletes">Atletas</TabsTrigger>
-            <TabsTrigger value="schedule">Horarios</TabsTrigger>
-          </TabsList>
+        <CardContent className="space-y-6">
+          {/* Mensajes de estado */}
+          {message && (
+            <Alert
+              variant={message.type === "success" ? "default" : "destructive"}
+            >
+              <AlertDescription>{message.content}</AlertDescription>
+            </Alert>
+          )}
 
-          {/* Dashboard */}
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Total Atletas
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{atletas.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Activos en el club
-                  </p>
-                </CardContent>
-              </Card>
+          {/* Alerta informativa */}
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Versión Conectada a Supabase:</strong> Esta aplicación
+              ahora se conecta a una base de datos real para gestionar
+              asistencias.
+            </AlertDescription>
+          </Alert>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Grupos</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{grupos.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Diferentes niveles
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Profesores
-                  </CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{profesores.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Instructores activos
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Asistencia Promedio
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {Math.round(
-                      atletas.reduce(
-                        (acc, atleta) => acc + atleta.asistencia,
-                        0
-                      ) / atletas.length
-                    )}
-                    %
-                  </div>
-                  <p className="text-xs text-muted-foreground">Último mes</p>
-                </CardContent>
-              </Card>
+          {/* Controles de fecha y horario */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-5 w-5 flex-shrink-0" />
+              <div className="w-full">
+                <label className="block text-sm font-medium mb-1">Fecha</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
-            {/* Grupos Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Resumen por Grupos</CardTitle>
-                <CardDescription>
-                  Distribución de atletas y asistencia por grupo
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {grupos.map((grupo) => {
-                    const atletasGrupo = atletas.filter(
-                      (a) => a.grupo === grupo.nombre
-                    );
-                    const promedioAsistencia =
-                      atletasGrupo.length > 0
-                        ? Math.round(
-                            atletasGrupo.reduce(
-                              (acc, a) => acc + a.asistencia,
-                              0
-                            ) / atletasGrupo.length
-                          )
-                        : 0;
-
-                    return (
-                      <div key={grupo.id} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge className={grupo.color}>{grupo.nombre}</Badge>
-                          <span className="text-sm text-gray-500">
-                            {grupo.nivel}
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>Atletas:</span>
+            {horarios.length > 0 ? (
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 flex-shrink-0" />
+                <div className="w-full">
+                  <label className="block text-sm font-medium mb-1">
+                    Horario
+                  </label>
+                  <Select
+                    value={selectedHorario?.id.toString() || ""}
+                    onValueChange={(value) => {
+                      const horario = horarios.find(
+                        (h) => h.id.toString() === value
+                      );
+                      setSelectedHorario(horario || null);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un horario" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {horarios.map((horario) => (
+                        <SelectItem
+                          key={horario.id}
+                          value={horario.id.toString()}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">
-                              {atletasGrupo.length}
+                              {horario.hora_inicio} - {horario.hora_fin}
                             </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>Asistencia:</span>
-                            <span
-                              className={`font-medium ${getAsistenciaColor(
-                                promedioAsistencia
-                              )}`}
-                            >
-                              {promedioAsistencia}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Attendance */}
-          <TabsContent value="attendance" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Marcar Asistencia</CardTitle>
-                <CardDescription>
-                  Registra la asistencia de los atletas para la fecha
-                  seleccionada
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <Label htmlFor="date">Fecha</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label htmlFor="schedule">Horario</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar horario" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {horarios.map((horario) => (
-                          <SelectItem
-                            key={horario.id}
-                            value={horario.id.toString()}
-                          >
-                            {horario.dia} {horario.hora} - {horario.grupo}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Atleta</TableHead>
-                        <TableHead>Grupo</TableHead>
-                        <TableHead>Asistencia</TableHead>
-                        <TableHead>Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {atletas.slice(0, 8).map((atleta) => (
-                        <TableRow key={atleta.id}>
-                          <TableCell className="font-medium">
-                            {atleta.nombre}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getGrupoColor(atleta.grupo)}>
-                              {atleta.grupo}
+                            <Badge variant="secondary">
+                              {horario.grupos.map((g) => g.nombre).join(", ")}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={getAsistenciaColor(atleta.asistencia)}
-                            >
-                              {atleta.asistencia}%
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                            <Badge variant="outline">
+                              {horario.profesores
+                                .map((p) => p.nombre)
+                                .join(", ")}
+                            </Badge>
+                          </div>
+                        </SelectItem>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 flex-shrink-0" />
+                <div className="w-full">
+                  <label className="block text-sm font-medium mb-1">
+                    Horario
+                  </label>
+                  <Select disabled value="">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Cargando horarios..." />
+                    </SelectTrigger>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
 
-          {/* Athletes */}
-          <TabsContent value="athletes" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gestión de Atletas</CardTitle>
-                <CardDescription>
-                  Lista completa de atletas y su información
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Buscar atleta..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
+          {/* Lista de atletas */}
+          {selectedHorario ? (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold">
+                  {selectedHorario.grupos
+                    .map((g) => `${g.nombre} (${g.nivel})`)
+                    .join(", ")}
+                </h3>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleAllAsistencias}
+                    className="flex items-center gap-2"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    {atletas.every((a) => a.presente)
+                      ? "Desmarcar todos"
+                      : "Marcar todos"}
+                  </Button>
+
+                  <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm">
+                      {atletasPresentes}/{totalAtletas} presentes
+                    </span>
                   </div>
-                  <div className="flex-1">
-                    <Select
-                      value={selectedGroup}
-                      onValueChange={setSelectedGroup}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filtrar por grupo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos los grupos</SelectItem>
-                        {grupos.map((grupo) => (
-                          <SelectItem key={grupo.id} value={grupo.nombre}>
-                            {grupo.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
+              </div>
 
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Atleta</TableHead>
-                        <TableHead>Grupo</TableHead>
-                        <TableHead>Nivel</TableHead>
-                        <TableHead>Asistencia</TableHead>
-                        <TableHead>Estado</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAtletas.map((atleta) => {
-                        const grupo = grupos.find(
-                          (g) => g.nombre === atleta.grupo
-                        );
-                        return (
-                          <TableRow key={atleta.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback>
-                                    {atleta.nombre
-                                      .split(" ")
-                                      .map((n) => n[0])
-                                      .join("")}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">
-                                  {atleta.nombre}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getGrupoColor(atleta.grupo)}>
-                                {atleta.grupo}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{grupo?.nivel}</TableCell>
-                            <TableCell>
-                              <span
-                                className={getAsistenciaColor(
-                                  atleta.asistencia
-                                )}
-                              >
-                                {atleta.asistencia}%
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  atleta.asistencia >= 80
-                                    ? "default"
-                                    : "destructive"
-                                }
-                              >
-                                {atleta.asistencia >= 80
-                                  ? "Activo"
-                                  : "Atención"}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Cargando atletas...</p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Schedule */}
-          <TabsContent value="schedule" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Horarios de Entrenamiento</CardTitle>
-                <CardDescription>
-                  Programación semanal de clases y profesores asignados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {horarios.map((horario) => (
-                    <div
-                      key={horario.id}
-                      className="border rounded-lg p-4 space-y-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-lg">{horario.dia}</h3>
-                        <Badge variant="outline">{horario.hora}</Badge>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Grupo:</span>
-                          <Badge className={getGrupoColor(horario.grupo)}>
-                            {horario.grupo}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">
-                            Profesor:
-                          </span>
-                          <span className="text-sm font-medium">
-                            {horario.profesor}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">
-                            Atletas:
-                          </span>
-                          <span className="text-sm font-medium">
-                            {
-                              atletas.filter((a) => a.grupo === horario.grupo)
-                                .length
-                            }
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Profesores</CardTitle>
-                <CardDescription>
-                  Información de los instructores del club
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {profesores.map((profesor) => {
-                    const horariosProfesor = horarios.filter(
-                      (h) => h.profesor === profesor.nombre
-                    );
-                    return (
+              ) : atletas.length > 0 ? (
+                <>
+                  <div className="grid gap-2">
+                    {atletas.map((atleta) => (
                       <div
-                        key={profesor.id}
-                        className="border rounded-lg p-4 space-y-3"
+                        key={atleta.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                          atleta.presente
+                            ? "bg-green-50 border-green-200"
+                            : "bg-gray-50 border-gray-200"
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback>
-                              {profesor.nombre
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-semibold">{profesor.nombre}</h3>
-                            <p className="text-sm text-gray-600">
-                              {profesor.email}
-                            </p>
-                          </div>
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`atleta-${atleta.id}`}
+                            checked={atleta.presente}
+                            onCheckedChange={() => toggleAsistencia(atleta.id)}
+                          />
+                          <label
+                            htmlFor={`atleta-${atleta.id}`}
+                            className="text-sm font-medium cursor-pointer"
+                          >
+                            {atleta.nombre} {atleta.apellido}
+                          </label>
                         </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>Clases:</span>
-                            <span className="font-medium">
-                              {horariosProfesor.length}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>Grupos:</span>
-                            <span className="font-medium">
-                              {
-                                new Set(horariosProfesor.map((h) => h.grupo))
-                                  .size
-                              }
-                            </span>
-                          </div>
-                        </div>
+                        <Badge
+                          variant={atleta.presente ? "default" : "secondary"}
+                          className="px-2 py-0.5"
+                        >
+                          {atleta.presente ? "Presente" : "Ausente"}
+                        </Badge>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      onClick={guardarAsistencias}
+                      disabled={saving}
+                      className="flex items-center gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      {saving ? "Guardando..." : "Guardar Asistencias"}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No hay atletas registrados en este grupo</p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+              )}
+            </div>
+          ) : (
+            horarios.length === 0 &&
+            !loading && (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No hay horarios programados para esta fecha</p>
+              </div>
+            )
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
