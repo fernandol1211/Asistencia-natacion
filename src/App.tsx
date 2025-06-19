@@ -6,14 +6,16 @@ import LoginModal from "./components/LoginModal";
 import AttendanceCard from "./components/AttendanceCard";
 import NoSessionView from "./components/NoSessionView";
 import Message from "./components/Message";
-import {
-  type HorarioUI,
-  type AtletaUI,
-  type HorarioSupabase,
-  type AtletaSupabase,
-  type AsistenciaSupabase,
-  type MessageType,
-} from "./types/index";
+import type {
+  HorarioUI,
+  AtletaUI,
+  HorarioSupabase,
+  AtletaSupabase,
+  AsistenciaSupabase,
+  MessageType,
+  GrupoDB,
+  ProfesorDB,
+} from "./types";
 
 export default function AttendanceTracker() {
   const [horarios, setHorarios] = useState<HorarioUI[]>([]);
@@ -32,8 +34,9 @@ export default function AttendanceTracker() {
   const [showLogin, setShowLogin] = useState(false);
   const initialLoadRef = useRef(true);
 
-  // Verificar sesión al cargar
+  // Verificar sesión al cargar y manejar eventos de autenticación
   useEffect(() => {
+    // Obtener sesión inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -44,12 +47,27 @@ export default function AttendanceTracker() {
       }
     });
 
+    // Escuchar cambios en la autenticación
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         if (session) {
           fetchProfesorId(session.user.id);
           setShowLogin(false);
+
+          // Mostrar mensaje según el tipo de evento
+          if (event === "SIGNED_IN") {
+            setMessage({
+              type: "success",
+              content: "Sesión iniciada correctamente",
+            });
+          } else if (event === "USER_UPDATED") {
+            setMessage({
+              type: "success",
+              content:
+                "¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión",
+            });
+          }
         } else {
           setProfesorId(null);
           setShowLogin(true);
@@ -116,7 +134,7 @@ export default function AttendanceTracker() {
 
         if (error) throw error;
 
-        // Convertir a tipo HorarioUI
+        // Convertir a tipo HorarioUI y filtrar valores nulos
         const formattedHorarios = (
           horarios as unknown as HorarioSupabase[]
         ).map((horario) => ({
@@ -124,8 +142,12 @@ export default function AttendanceTracker() {
           dia_semana: horario.dia_semana,
           hora_inicio: horario.hora_inicio,
           hora_fin: horario.hora_fin,
-          grupos: horario.grupos.map((g) => g.grupos),
-          profesores: horario.profesores.map((p) => p.profesores),
+          grupos: horario.grupos
+            .map((g) => g.grupos)
+            .filter((g): g is GrupoDB => g !== null),
+          profesores: horario.profesores
+            .map((p) => p.profesores)
+            .filter((p): p is ProfesorDB => p !== null),
         }));
 
         setHorarios(formattedHorarios);
@@ -339,6 +361,13 @@ export default function AttendanceTracker() {
           setMessage({
             type: "success",
             content: "Sesión iniciada correctamente",
+          });
+        }}
+        onRegisterSuccess={() => {
+          setMessage({
+            type: "success",
+            content:
+              "¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión",
           });
         }}
       />

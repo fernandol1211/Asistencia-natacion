@@ -1,4 +1,3 @@
-// src/components/DateSchedulePicker.tsx
 import { Calendar, Clock } from "lucide-react";
 import {
   Select,
@@ -63,10 +62,15 @@ export default function DateSchedulePicker({
                         {horario.hora_inicio} - {horario.hora_fin}
                       </span>
                       <Badge variant="secondary">
-                        {horario.grupos.map((g) => g.nombre).join(", ")}
+                        {horario.grupos
+                          .filter((g) => g !== null)
+                          .map((g) => g.nombre)
+                          .join(", ")}
                       </Badge>
                       <Badge variant="outline">
-                        {horario.profesores.map((p) => p.nombre).join(", ")}
+                        {horario.profesores
+                          .map((p) => p?.nombre || "Sin profesor")
+                          .join(", ")}
                       </Badge>
                     </div>
                   </SelectItem>

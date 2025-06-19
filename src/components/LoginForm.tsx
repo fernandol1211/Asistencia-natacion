@@ -1,4 +1,3 @@
-// LoginForm.tsx
 import { useState } from "react";
 import {
   Card,
@@ -9,22 +8,36 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { LogIn, Info, Users } from "lucide-react";
-import { supabase } from "../lib/supabase"; // Asegúrate de exportar supabase desde tu archivo principal
+import {
+  LogIn,
+  Info,
+  Users,
+  UserPlus,
+  Lock,
+  Mail,
+  Key,
+  Loader2,
+} from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface LoginFormProps {
   onCancel: () => void;
   onLoginSuccess: () => void;
+  onRegisterSuccess: () => void;
 }
 
 export default function LoginForm({
   onCancel,
   onLoginSuccess,
+  onRegisterSuccess,
 }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleLogin = async () => {
     try {
@@ -56,7 +69,6 @@ export default function LoginForm({
     } catch (err) {
       console.error("Error al iniciar sesión:", err);
 
-      // Manejar diferentes tipos de errores
       if (err instanceof Error) {
         setError(err.message);
       } else if (typeof err === "string") {
@@ -68,15 +80,70 @@ export default function LoginForm({
       setLoading(false);
     }
   };
+
+  const handleRegister = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Validaciones
+      if (!name || !email || !password || !confirmPassword) {
+        throw new Error("Por favor completa todos los campos");
+      }
+
+      if (password !== confirmPassword) {
+        throw new Error("Las contraseñas no coinciden");
+      }
+
+      if (password.length < 6) {
+        throw new Error("La contraseña debe tener al menos 6 caracteres");
+      }
+
+      // Registrar usuario
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      // Si el registro es exitoso, mostrar mensaje y cambiar a modo login
+      setError(
+        "¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión."
+      );
+      setIsRegistering(false);
+      onRegisterSuccess();
+    } catch (err) {
+      console.error("Error al registrarse:", err);
+
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (typeof err === "string") {
+        setError(err);
+      } else {
+        setError("Error desconocido al registrarse");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <CardTitle className="flex items-center justify-center gap-2">
           <Users className="h-6 w-6" />
-          Inicio de Sesión
+          {isRegistering ? "Registrar Cuenta" : "Inicio de Sesión"}
         </CardTitle>
         <CardDescription>
-          Ingresa como profesor para registrar asistencias
+          {isRegistering
+            ? "Crea una cuenta para registrar asistencias"
+            : "Ingresa como profesor para registrar asistencias"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -90,8 +157,25 @@ export default function LoginForm({
           </div>
 
           <div className="space-y-4">
+            {isRegistering && (
+              <div>
+                <label className="text-sm font-medium mb-1 flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Nombre completo
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="Tu nombre"
+                />
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label className="text-sm font-medium mb-1 flex items-center gap-2">
+                <Mail className="h-4 w-4" />
                 Correo electrónico
               </label>
               <input
@@ -104,7 +188,8 @@ export default function LoginForm({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label className="text-sm font-medium mb-1 flex items-center gap-2">
+                <Lock className="h-4 w-4" />
                 Contraseña
               </label>
               <input
@@ -115,6 +200,22 @@ export default function LoginForm({
                 placeholder="••••••••"
               />
             </div>
+
+            {isRegistering && (
+              <div>
+                <label className="text-sm font-medium mb-1 flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Confirmar Contraseña
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
           </div>
 
           {error && (
@@ -125,12 +226,17 @@ export default function LoginForm({
 
           <div className="flex flex-col gap-3">
             <Button
-              onClick={handleLogin}
+              onClick={isRegistering ? handleRegister : handleLogin}
               disabled={loading}
               className="flex items-center gap-2"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isRegistering ? (
+                <>
+                  <UserPlus className="h-4 w-4" />
+                  Registrarse
+                </>
               ) : (
                 <>
                   <LogIn className="h-4 w-4" />
@@ -139,9 +245,22 @@ export default function LoginForm({
               )}
             </Button>
 
-            <Button variant="outline" onClick={onCancel} disabled={loading}>
-              Cancelar
-            </Button>
+            <div className="flex justify-between">
+              <Button
+                variant="link"
+                className="text-sm p-0 h-auto"
+                onClick={() => setIsRegistering(!isRegistering)}
+                disabled={loading}
+              >
+                {isRegistering
+                  ? "¿Ya tienes cuenta? Inicia sesión"
+                  : "¿No tienes cuenta? Regístrate"}
+              </Button>
+
+              <Button variant="outline" onClick={onCancel} disabled={loading}>
+                Cancelar
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
