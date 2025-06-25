@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -5,12 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Users, LogOut } from "lucide-react";
+import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import DateSchedulePicker from "@/components/DateSchedulePicker";
-import AthleteList from "@/components/AthleteList";
-import type { HorarioUI, AtletaUI } from "@/types"; // Quitamos Session de los imports
+import DateSchedulePicker from "./DateSchedulePicker";
+import AthleteList from "./AthleteList";
+import type { HorarioUI, AtletaUI } from "@/types";
 
 interface AttendanceCardProps {
   profesorId: number | null;
@@ -32,7 +33,6 @@ interface AttendanceCardProps {
 
 export default function AttendanceCard({
   profesorId,
-  onLogout,
   selectedDate,
   onDateChange,
   horarios,
@@ -48,36 +48,34 @@ export default function AttendanceCard({
   onSave,
 }: AttendanceCardProps) {
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-6 w-6" />
-              Club de Natación
+    <Card className="w-full shadow-lg">
+      <CardHeader className="pb-4 sm:pb-6">
+        <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-start lg:space-y-0">
+          {/* Título y descripción */}
+          <div className="space-y-2">
+            <CardTitle className="flex items-center gap-2 sm:gap-3 text-xl sm:text-2xl lg:text-3xl">
+              <Users className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 flex-shrink-0" />
+              <span>Club de Natación</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm sm:text-base lg:text-lg">
               Registra la asistencia diaria de los atletas
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">
+
+          {/* Información del profesor */}
+          <div className="flex items-center">
+            <Badge
+              variant="secondary"
+              className="text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5"
+            >
               Profesor ID: {profesorId || "Cargando..."}
             </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onLogout}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Cerrar sesión</span>
-            </Button>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 sm:space-y-8 px-4 sm:px-6">
+        {/* Selector de fecha y horario */}
         <DateSchedulePicker
           selectedDate={selectedDate}
           onDateChange={onDateChange}
@@ -86,15 +84,38 @@ export default function AttendanceCard({
           onHorarioChange={onHorarioChange}
         />
 
+        {/* Contenido principal */}
         {selectedHorario ? (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold">
-                {selectedHorario.grupos
-                  .map((g) => `${g.nombre} (${g.nivel})`)
-                  .join(", ")}
-              </h3>
+          <div className="space-y-6">
+            {/* Información del horario seleccionado */}
+            <div className="p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="space-y-1">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                    {selectedHorario.grupos
+                      .map((g) => `${g.nombre} (${g.nivel})`)
+                      .join(", ")}
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-600">
+                    {selectedHorario.hora_inicio} - {selectedHorario.hora_fin}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {selectedHorario.profesores.map((profesor) => (
+                    <Badge
+                      key={profesor.id}
+                      variant="outline"
+                      className="text-xs sm:text-sm"
+                    >
+                      {profesor.nombre}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             </div>
+
+            {/* Lista de atletas */}
             <AthleteList
               atletas={atletas}
               toggleAsistencia={toggleAsistencia}
@@ -107,9 +128,16 @@ export default function AttendanceCard({
             />
           </div>
         ) : horarios.length === 0 && !loading ? (
-          <div className="text-center py-8 text-gray-500">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No hay horarios programados para esta fecha</p>
+          <div className="text-center py-12 sm:py-16 space-y-4">
+            <Users className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-gray-400" />
+            <div className="space-y-2">
+              <h3 className="text-lg sm:text-xl font-medium text-gray-900">
+                No hay horarios programados
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600">
+                No se encontraron horarios para la fecha seleccionada
+              </p>
+            </div>
           </div>
         ) : null}
       </CardContent>

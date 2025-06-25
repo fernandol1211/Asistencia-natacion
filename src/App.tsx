@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect, useCallback, useRef } from "react";
-import { type Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import Header from "./components/Header";
 import LoginModal from "./components/LoginModal";
@@ -319,8 +321,6 @@ export default function AttendanceTracker() {
       });
     } finally {
       setSaving(false);
-      // Limpiar el mensaje después de 5 segundos
-      setTimeout(() => setMessage(null), 5000);
     }
   }, [selectedHorario, atletas, selectedDate, profesorId]);
 
@@ -371,7 +371,7 @@ export default function AttendanceTracker() {
           });
         }}
       />
-      <main className="container mx-auto p-6 max-w-4xl">
+      <main className="container mx-auto px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-7xl">
         {session ? (
           <AttendanceCard
             profesorId={profesorId}
