@@ -23,8 +23,11 @@ export default function Header({
   };
 
   const handleMenuAction = (fn?: (() => void) | null) => {
-    if (typeof fn === "function") fn();
     setIsMenuOpen(false);
+    if (typeof fn === "function") {
+      // Usar setTimeout para evitar conflictos de estado
+      setTimeout(() => fn(), 100);
+    }
   };
 
   return (

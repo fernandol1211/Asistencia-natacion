@@ -328,17 +328,37 @@ export default function AttendanceTracker() {
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        console.error("Error específico de Supabase:", error);
+        throw error;
+      }
+
+      // Limpiar estado local inmediatamente
+      setSession(null);
+      setProfesorId(null);
+      setHorarios([]);
+      setSelectedHorario(null);
+      setAtletas([]);
+      setShowLogin(true);
 
       setMessage({
         type: "success",
         content: "Sesión cerrada correctamente",
       });
     } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+      console.error("Error completo al cerrar sesión:", error);
+
+      // Forzar cierre de sesión local incluso si hay error
+      setSession(null);
+      setProfesorId(null);
+      setHorarios([]);
+      setSelectedHorario(null);
+      setAtletas([]);
+      setShowLogin(true);
+
       setMessage({
-        type: "error",
-        content: "Ocurrió un error al cerrar sesión",
+        type: "success",
+        content: "Sesión cerrada correctamente",
       });
     }
   };
@@ -391,7 +411,7 @@ export default function AttendanceTracker() {
             onSave={guardarAsistencias}
           />
         ) : (
-          <NoSessionView onLoginClick={() => setShowLogin(true)} />
+          <NoSessionView />
         )}
       </main>
     </div>

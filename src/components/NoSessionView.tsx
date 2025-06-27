@@ -1,13 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Users, LogIn } from "lucide-react";
+import { Users } from "lucide-react";
 
-interface NoSessionViewProps {
-  onLoginClick: () => void;
-}
-
-export default function NoSessionView({ onLoginClick }: NoSessionViewProps) {
+export default function NoSessionView() {
   return (
     <div className="flex items-center justify-center min-h-[60vh] px-4">
       <div className="text-center max-w-md mx-auto space-y-6 sm:space-y-8">
@@ -25,18 +20,9 @@ export default function NoSessionView({ onLoginClick }: NoSessionViewProps) {
           </div>
         </div>
 
-        <Button
-          size="lg"
-          className="flex items-center gap-2 sm:gap-3 px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base lg:text-lg font-medium"
-          onClick={onLoginClick}
-        >
-          <LogIn className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
-          Iniciar sesión
-        </Button>
-
         <div className="text-xs sm:text-sm text-gray-500 space-y-1">
-          <p>¿Necesitas ayuda?</p>
-          <p>Contacta al administrador del sistema</p>
+          <p>Para iniciar sesión, usa el menú en la esquina superior derecha</p>
+          <p>¿Necesitas ayuda? Contacta al administrador del sistema</p>
         </div>
       </div>
     </div>
