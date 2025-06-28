@@ -1,22 +1,25 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Users, LogIn, LogOut, Menu, X, Home, User, Phone } from "lucide-react";
-import type { Session } from "@supabase/supabase-js";
+import {
+  Users,
+  LogIn,
+  LogOut,
+  Menu,
+  X,
+  Home,
+  User,
+  Phone,
+  ClipboardList,
+} from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-interface HeaderProps {
-  session: Session | null | undefined;
-  onLogout: () => void;
-  onLoginClick: () => void;
-}
-
-export default function Header({
-  session,
-  onLogout,
-  onLoginClick,
-}: HeaderProps) {
+export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { session, logout, setShowLogin } = useAuth();
 
   // Cerrar menú cuando cambia la sesión
   useEffect(() => {
@@ -70,6 +73,19 @@ export default function Header({
               <Home className="mr-2 h-4 w-4" />
               Inicio
             </Button>
+
+            {/* Nuevo: Botón de Asistencias solo para usuarios autenticados */}
+            {session && (
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/10"
+                onClick={() => handleNavigation("/asistencias")}
+              >
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Asistencias
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               className="text-white hover:bg-white/10"
@@ -116,6 +132,18 @@ export default function Header({
                   <span>Inicio</span>
                 </button>
 
+                {/* Nuevo: Botón de Asistencias solo para usuarios autenticados */}
+                {session && (
+                  <button
+                    type="button"
+                    onClick={() => handleNavigation("/asistencias")}
+                    className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                  >
+                    <ClipboardList className="h-4 w-4 text-blue-500" />
+                    <span>Asistencias</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => handleNavigation("/about")}
@@ -154,7 +182,7 @@ export default function Header({
                     {/* Botón cerrar sesión */}
                     <button
                       type="button"
-                      onClick={() => handleMenuAction(onLogout)}
+                      onClick={() => handleMenuAction(logout)}
                       className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
                     >
                       <LogOut className="h-4 w-4 text-red-500" />
@@ -179,7 +207,7 @@ export default function Header({
                     {/* Botón iniciar sesión */}
                     <button
                       type="button"
-                      onClick={() => handleMenuAction(onLoginClick)}
+                      onClick={() => handleMenuAction(() => setShowLogin(true))}
                       className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
                     >
                       <LogIn className="h-4 w-4 text-blue-500" />

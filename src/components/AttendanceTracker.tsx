@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
-import Header from "./Header";
-import LoginModal from "./LoginModal";
 import AttendanceCard from "./AttendanceCard";
 import NoSessionView from "./NoSessionView";
 import Message from "./Message";
@@ -18,7 +15,7 @@ import type {
   GrupoDB,
   ProfesorDB,
 } from "../types";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function AttendanceTracker() {
   const [horarios, setHorarios] = useState<HorarioUI[]>([]);
@@ -31,52 +28,11 @@ export default function AttendanceTracker() {
   );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
   const [profesorId, setProfesorId] = useState<number | null>(null);
   const [message, setMessage] = useState<MessageType>(null);
-  const [showLogin, setShowLogin] = useState(false);
   const initialLoadRef = useRef(true);
-  const navigate = useNavigate();
 
-  // Verificar sesión al cargar
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        fetchProfesorId(session.user.id);
-        setShowLogin(false);
-      }
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        if (session) {
-          fetchProfesorId(session.user.id);
-          setShowLogin(false);
-
-          if (event === "SIGNED_IN") {
-            setMessage({
-              type: "success",
-              content: "Sesión iniciada correctamente",
-            });
-          } else if (event === "USER_UPDATED") {
-            setMessage({
-              type: "success",
-              content:
-                "¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión",
-            });
-          }
-        } else {
-          setProfesorId(null);
-        }
-      }
-    );
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
+  const { session, logout } = useAuth(); // Añadimos logout del contexto
 
   // Obtener ID del profesor
   const fetchProfesorId = async (userId: string) => {
@@ -163,6 +119,7 @@ export default function AttendanceTracker() {
 
     if (session) {
       fetchHorarios();
+      fetchProfesorId(session.user.id);
     }
   }, [selectedDate, getDayName, session]);
 
@@ -306,95 +263,33 @@ export default function AttendanceTracker() {
     }
   }, [selectedHorario, atletas, selectedDate, profesorId]);
 
-  // Cerrar sesión corregido
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      setSession(null);
-      setProfesorId(null);
-      setHorarios([]);
-      setSelectedHorario(null);
-      setAtletas([]);
-      setShowLogin(false); // Cerrar modal automáticamente
-
-      navigate("/");
-
-      setMessage({
-        type: "success",
-        content: "Sesión cerrada correctamente",
-      });
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-
-      setSession(null);
-      setProfesorId(null);
-      setHorarios([]);
-      setSelectedHorario(null);
-      setAtletas([]);
-      setShowLogin(false); // Cerrar modal en caso de error
-
-      navigate("/");
-
-      setMessage({
-        type: "success",
-        content: "Sesión cerrada correctamente",
-      });
-    }
-  };
-
   const atletasPresentes = atletas.filter((a) => a.presente).length;
   const totalAtletas = atletas.length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <Message message={message} />
-      <Header
-        session={session}
-        onLogout={handleLogout}
-        onLoginClick={() => setShowLogin(true)}
-      />
-      <LoginModal
-        show={showLogin}
-        onCancel={() => setShowLogin(false)}
-        onLoginSuccess={() => {
-          setMessage({
-            type: "success",
-            content: "Sesión iniciada correctamente",
-          });
-        }}
-        onRegisterSuccess={() => {
-          setMessage({
-            type: "success",
-            content:
-              "¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión",
-          });
-        }}
-      />
-      <main className="container mx-auto px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-7xl">
-        {session ? (
-          <AttendanceCard
-            profesorId={profesorId}
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            horarios={horarios}
-            selectedHorario={selectedHorario}
-            onHorarioChange={setSelectedHorario}
-            atletas={atletas}
-            toggleAsistencia={toggleAsistencia}
-            toggleAllAsistencias={toggleAllAsistencias}
-            atletasPresentes={atletasPresentes}
-            totalAtletas={totalAtletas}
-            loading={loading}
-            saving={saving}
-            onSave={guardarAsistencias}
-            onLogout={handleLogout}
-          />
-        ) : (
-          <NoSessionView />
-        )}
-      </main>
-    </div>
+      {session ? (
+        <AttendanceCard
+          profesorId={profesorId}
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+          horarios={horarios}
+          selectedHorario={selectedHorario}
+          onHorarioChange={setSelectedHorario}
+          atletas={atletas}
+          toggleAsistencia={toggleAsistencia}
+          toggleAllAsistencias={toggleAllAsistencias}
+          atletasPresentes={atletasPresentes}
+          totalAtletas={totalAtletas}
+          loading={loading}
+          saving={saving}
+          onSave={guardarAsistencias}
+          onLogout={logout} // Añadimos onLogout aquí
+        />
+      ) : (
+        <NoSessionView />
+      )}
+    </>
   );
 }
