@@ -1,33 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Users, LogIn, LogOut, Menu, X } from "lucide-react";
-import type { Session } from "@supabase/supabase-js";
+import {
+  Users,
+  LogIn,
+  LogOut,
+  Menu,
+  X,
+  Home,
+  User,
+  Phone,
+  ClipboardList,
+} from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-interface HeaderProps {
-  session: Session | null;
-  onLogout: () => void;
-  onLoginClick: () => void;
-}
-
-export default function Header({
-  session,
-  onLogout,
-  onLoginClick,
-}: HeaderProps) {
+export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { session, logout, setShowLogin } = useAuth();
+
+  // Cerrar menú cuando cambia la sesión
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [session]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  const handleMenuAction = (fn?: (() => void) | null) => {
+  const handleMenuAction = (action?: () => void) => {
     setIsMenuOpen(false);
-    if (typeof fn === "function") {
-      // Usar setTimeout para evitar conflictos de estado
-      setTimeout(() => fn(), 100);
+    if (action) {
+      setTimeout(action, 100);
     }
+  };
+
+  const handleNavigation = (path: string) => {
+    setIsMenuOpen(false);
+    navigate(path);
   };
 
   return (
@@ -36,18 +48,61 @@ export default function Header({
         <div className="flex justify-between items-center">
           {/* Logo y título */}
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-              <Users className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
-                Control de Asistencias
-              </h1>
-              <p className="text-xs sm:text-sm text-blue-100 hidden sm:block">
-                Sistema de gestión deportiva
-              </p>
-            </div>
+            <Link to="/" className="flex items-center gap-3">
+              <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                <Users className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
+                  Control de Asistencias
+                </h1>
+                <p className="text-xs sm:text-sm text-blue-100 hidden sm:block">
+                  Sistema de gestión deportiva
+                </p>
+              </div>
+            </Link>
           </div>
+
+          {/* Navegación de escritorio */}
+          <nav className="hidden md:flex items-center space-x-6">
+            <Button
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              onClick={() => handleNavigation("/")}
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Inicio
+            </Button>
+
+            {/* Nuevo: Botón de Asistencias solo para usuarios autenticados */}
+            {session && (
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/10"
+                onClick={() => handleNavigation("/asistencias")}
+              >
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Asistencias
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              onClick={() => handleNavigation("/about")}
+            >
+              <User className="mr-2 h-4 w-4" />
+              Acerca de
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              onClick={() => handleNavigation("/contact")}
+            >
+              <Phone className="mr-2 h-4 w-4" />
+              Contacto
+            </Button>
+          </nav>
 
           {/* Botón hamburguesa */}
           <div className="relative">
@@ -67,6 +122,48 @@ export default function Header({
             {/* Menú desplegable */}
             {isMenuOpen && (
               <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg border border-gray-200 shadow-lg ring-1 ring-black/5 py-2 z-50 transition-all animate-in slide-in-from-top-2">
+                {/* Navegación móvil */}
+                <button
+                  type="button"
+                  onClick={() => handleNavigation("/")}
+                  className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                >
+                  <Home className="h-4 w-4 text-blue-500" />
+                  <span>Inicio</span>
+                </button>
+
+                {/* Nuevo: Botón de Asistencias solo para usuarios autenticados */}
+                {session && (
+                  <button
+                    type="button"
+                    onClick={() => handleNavigation("/asistencias")}
+                    className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                  >
+                    <ClipboardList className="h-4 w-4 text-blue-500" />
+                    <span>Asistencias</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleNavigation("/about")}
+                  className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                >
+                  <User className="h-4 w-4 text-blue-500" />
+                  <span>Acerca de</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleNavigation("/contact")}
+                  className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                >
+                  <Phone className="h-4 w-4 text-blue-500" />
+                  <span>Contacto</span>
+                </button>
+
+                <div className="border-t my-2"></div>
+
                 {session ? (
                   <>
                     {/* Información del usuario */}
@@ -85,7 +182,7 @@ export default function Header({
                     {/* Botón cerrar sesión */}
                     <button
                       type="button"
-                      onClick={() => handleMenuAction(onLogout)}
+                      onClick={() => handleMenuAction(logout)}
                       className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
                     >
                       <LogOut className="h-4 w-4 text-red-500" />
@@ -110,7 +207,7 @@ export default function Header({
                     {/* Botón iniciar sesión */}
                     <button
                       type="button"
-                      onClick={() => handleMenuAction(onLoginClick)}
+                      onClick={() => handleMenuAction(() => setShowLogin(true))}
                       className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
                     >
                       <LogIn className="h-4 w-4 text-blue-500" />
@@ -124,7 +221,7 @@ export default function Header({
         </div>
       </div>
 
-      {/* Overlay para cerrar el menú al hacer clic fuera */}
+      {/* Overlay para cerrar el menú */}
       {isMenuOpen && (
         <div
           className="fixed inset-0 z-40"
