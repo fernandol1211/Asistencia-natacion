@@ -19,7 +19,9 @@ export default function ContactPage() {
                 <Mail className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-medium">Email</h3>
-                  <p className="text-gray-600">soporte@juventusacademy.com</p>
+                  <p className="text-gray-600">
+                    soporte@democrataSportclub.com
+                  </p>
                 </div>
               </div>
 
@@ -69,7 +71,7 @@ export default function ContactPage() {
               <h3 className="font-medium mb-2">Soporte Técnico</h3>
               <p className="text-sm text-gray-600">
                 Para asistencia técnica, contáctanos durante nuestro horario de
-                atención o envía un correo a soporte@juventusacademy.com
+                atención o envía un correo a soporte@democrataSportclub.com
               </p>
             </div>
           </div>

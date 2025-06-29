@@ -3,13 +3,13 @@ export default function AboutPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-8">
         <h1 className="text-3xl font-bold mb-6 text-center text-blue-600">
-          Acerca de Juventus Academy
+          Acerca del Democrata Sport Club
         </h1>
 
         <div className="prose prose-blue max-w-none">
           <p className="text-lg">
-            Juventus Academy es un sistema de gestión deportiva diseñado para
-            optimizar el control de asistencias en academias y clubes
+            Democrata Sport Club es un sistema de gestión deportiva diseñado
+            para optimizar el control de asistencias en academias y clubes
             deportivos.
           </p>
 
