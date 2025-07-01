@@ -1,8 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "../lib/supabase";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Mail, Lock, User, Eye, EyeOff, Info } from "lucide-react";
 
 interface LoginModalProps {
   show: boolean;
@@ -17,120 +29,318 @@ export default function LoginModal({
   onLoginSuccess,
   onRegisterSuccess,
 }: LoginModalProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Eliminamos setSession ya que no es necesario
+  // Limpiar mensajes después de 5 segundos
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  if (!show) return null;
+
+  const DemoInfo = () => (
+    <Alert className="mb-4 border-blue-200 bg-blue-50">
+      <Info className="h-4 w-4 text-blue-600" />
+      <AlertDescription className="text-blue-800">
+        <strong>Datos de prueba:</strong>
+        Email: fernandoladera1211@gmail.com
+        <br />
+        Contraseña: supabase123
+      </AlertDescription>
+    </Alert>
+  );
+
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+    setMessage(null);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
     try {
-      if (isSignUp) {
-        // Registro
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (onRegisterSuccess) onRegisterSuccess();
-        setError(
-          "¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión"
-        );
-      } else {
-        // Inicio de sesión
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
-
-        // Eliminamos setSession porque el contexto ya maneja esto automáticamente
+      setMessage({ type: "success", text: "¡Inicio de sesión exitoso!" });
+      setTimeout(() => {
         if (onLoginSuccess) onLoginSuccess();
-      }
+      }, 1000);
     } catch (err) {
       console.error("Error de autenticación:", err);
-      setError(
-        isSignUp
-          ? "Error al registrarse. Por favor, inténtelo de nuevo."
-          : "Credenciales incorrectas. Por favor, inténtelo de nuevo."
-      );
+      setMessage({
+        type: "error",
+        text: "Credenciales incorrectas. Por favor, inténtelo de nuevo.",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  if (!show) return null;
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+    const fullName = formData.get("fullName") as string;
+
+    if (password !== confirmPassword) {
+      setMessage({ type: "error", text: "Las contraseñas no coinciden" });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      setMessage({
+        type: "success",
+        text: "¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión",
+      });
+
+      if (onRegisterSuccess) onRegisterSuccess();
+    } catch (err) {
+      console.error("Error de autenticación:", err);
+      setMessage({
+        type: "error",
+        text: "Error al registrarse. Por favor, inténtelo de nuevo.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-      <div className="w-full max-w-sm bg-white rounded-lg shadow-xl overflow-hidden">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-6 text-center">
-            {isSignUp ? "Crear cuenta" : "Iniciar sesión"}
-          </h2>
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">
+              Bienvenido
+            </CardTitle>
+            <CardDescription className="text-center">
+              Inicia sesión en tu cuenta o crea una nueva
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DemoInfo />
 
-          {error && (
-            <div
-              className={`mb-4 p-3 rounded-md text-center ${
-                error.includes("éxito")
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {error}
-            </div>
-          )}
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Iniciar Sesión</TabsTrigger>
+                <TabsTrigger value="signup">Registrarse</TabsTrigger>
+              </TabsList>
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-2 border rounded-md"
-                required
-                disabled={loading}
-              />
-            </div>
+              <TabsContent value="signin" className="space-y-4">
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signin-email"
+                        name="email"
+                        type="email"
+                        placeholder="demo@ejemplo.com"
+                        className="pl-10"
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-password">Contraseña</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signin-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="123456"
+                        className="pl-10 pr-10"
+                        required
+                        disabled={loading}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={loading}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Iniciar Sesión
+                  </Button>
+                </form>
+              </TabsContent>
 
-            <div className="mb-6">
-              <label className="block text-gray-700 mb-2" htmlFor="password">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 border rounded-md"
-                required
-                minLength={6}
-                disabled={loading}
-              />
-            </div>
+              <TabsContent value="signup" className="space-y-4">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Nombre Completo</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-name"
+                        name="fullName"
+                        type="text"
+                        placeholder="Tu nombre completo"
+                        className="pl-10"
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-email"
+                        name="email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        className="pl-10"
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Contraseña</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10"
+                        required
+                        minLength={6}
+                        disabled={loading}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={loading}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password">
+                      Confirmar Contraseña
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-confirm-password"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10"
+                        required
+                        minLength={6}
+                        disabled={loading}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        disabled={loading}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Crear Cuenta
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
 
-            <div className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading
-                  ? "Cargando..."
-                  : isSignUp
-                  ? "Registrarse"
-                  : "Iniciar sesión"}
-              </Button>
+            {message && (
+              <Alert
+                className={`mt-4 ${
+                  message.type === "error"
+                    ? "border-red-500 bg-red-50"
+                    : "border-green-500 bg-green-50"
+                }`}
+              >
+                <AlertDescription
+                  className={
+                    message.type === "error" ? "text-red-700" : "text-green-700"
+                  }
+                >
+                  {message.text}
+                </AlertDescription>
+              </Alert>
+            )}
 
+            <div className="mt-4">
               <Button
                 variant="outline"
                 onClick={onCancel}
@@ -140,20 +350,8 @@ export default function LoginModal({
                 Cancelar
               </Button>
             </div>
-          </form>
-
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-blue-600 hover:underline"
-            >
-              {isSignUp
-                ? "¿Ya tienes cuenta? Inicia sesión"
-                : "¿No tienes cuenta? Regístrate"}
-            </button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

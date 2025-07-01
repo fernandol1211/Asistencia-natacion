@@ -12,6 +12,8 @@ import {
   User,
   Phone,
   ClipboardList,
+  LayoutDashboard,
+  CalendarDays,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -74,16 +76,45 @@ export default function Header() {
               Inicio
             </Button>
 
-            {/* Nuevo: Botón de Asistencias solo para usuarios autenticados */}
+            {/* Nuevos enlaces solo para usuarios autenticados */}
             {session && (
-              <Button
-                variant="ghost"
-                className="text-white hover:bg-white/10"
-                onClick={() => handleNavigation("/asistencias")}
-              >
-                <ClipboardList className="mr-2 h-4 w-4" />
-                Asistencias
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => handleNavigation("/asistencias")}
+                >
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Asistencias
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => handleNavigation("/dashboard")}
+                >
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => handleNavigation("/atletas")}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Atletas
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => handleNavigation("/horarios")}
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Horarios
+                </Button>
+              </>
             )}
 
             <Button
@@ -132,16 +163,45 @@ export default function Header() {
                   <span>Inicio</span>
                 </button>
 
-                {/* Nuevo: Botón de Asistencias solo para usuarios autenticados */}
+                {/* Nuevos enlaces solo para usuarios autenticados */}
                 {session && (
-                  <button
-                    type="button"
-                    onClick={() => handleNavigation("/asistencias")}
-                    className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
-                  >
-                    <ClipboardList className="h-4 w-4 text-blue-500" />
-                    <span>Asistencias</span>
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleNavigation("/asistencias")}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                    >
+                      <ClipboardList className="h-4 w-4 text-blue-500" />
+                      <span>Asistencias</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleNavigation("/dashboard")}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                    >
+                      <LayoutDashboard className="h-4 w-4 text-blue-500" />
+                      <span>Dashboard</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleNavigation("/atletas")}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                    >
+                      <Users className="h-4 w-4 text-blue-500" />
+                      <span>Atletas</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleNavigation("/horarios")}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                    >
+                      <CalendarDays className="h-4 w-4 text-blue-500" />
+                      <span>Horarios</span>
+                    </button>
+                  </>
                 )}
 
                 <button
