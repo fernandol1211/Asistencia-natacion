@@ -5,7 +5,6 @@ import type {
   ProfesorDB,
   HorarioUI,
   AtletaConAsistencia,
-  AsistenciaSupabase,
 } from "@/types";
 
 // Hook para obtener grupos

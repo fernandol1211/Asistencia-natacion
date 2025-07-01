@@ -9,6 +9,8 @@ export interface ProfesorDB {
   id: number;
   nombre: string;
   user_id?: string;
+  email?: string; // Nueva propiedad
+  telefono?: string; // Nueva propiedad
 }
 
 export interface HorarioUI {
@@ -53,3 +55,16 @@ export type MessageType = {
   type: "success" | "error";
   content: string;
 } | null;
+
+// Agrega estas interfaces
+export interface AtletaConAsistencia {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  grupo_id: number;
+  grupo: GrupoDB;
+  clases_asistidas: number;
+  total_clases: number;
+  porcentaje_asistencia: number;
+}
