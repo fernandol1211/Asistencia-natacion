@@ -7,9 +7,12 @@ import { useAuth } from "./context/AuthContext";
 import Header from "./components/Header";
 import LoginModal from "./components/LoginModal";
 import Message from "./components/Message";
+import DashboardPage from "./pages/Dashboard";
+import AtletasPage from "./pages/Atletas";
+import HorariosPage from "./pages/Horarios";
 
 export default function AppContent() {
-  const { showLogin, setShowLogin, isLoading } = useAuth();
+  const { showLogin, setShowLogin, isLoading, session } = useAuth();
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -32,6 +35,15 @@ export default function AppContent() {
           <Route path="/Asistencia-natacion" element={<AttendanceTracker />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
+
+          {/* Nuevas rutas protegidas */}
+          {session && (
+            <>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/atletas" element={<AtletasPage />} />
+              <Route path="/horarios" element={<HorariosPage />} />
+            </>
+          )}
         </Routes>
       </main>
     </div>
