@@ -6,7 +6,7 @@ import type {
   HorarioUI,
   AtletaConAsistencia,
 } from "@/types";
-
+//dd
 // Hook para obtener grupos
 export function useGrupos() {
   const [grupos, setGrupos] = useState<GrupoDB[]>([]);
