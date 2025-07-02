@@ -8,7 +8,7 @@ import type { AtletaUI } from "@/types";
 
 interface AthleteListProps {
   atletas: AtletaUI[];
-  toggleAsistencia: (id: number) => void;
+  toggleAsistencia: (id: string) => void;
   toggleAllAsistencias: () => void;
   atletasPresentes: number;
   totalAtletas: number;

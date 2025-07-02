@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import {
   Card,
@@ -101,18 +99,37 @@ export default function LoginForm({
         throw new Error("La contraseña debe tener al menos 6 caracteres");
       }
 
-      // Registrar usuario
+      // Registrar usuario con rol "profesor"
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: name,
+            role: "profesor",
           },
         },
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        // Manejar errores específicos de Supabase
+        let errorMessage = "Error al registrarse";
+
+        if (signUpError.message.includes("User already registered")) {
+          errorMessage = "Este email ya está registrado";
+        } else if (signUpError.message.includes("duplicate key")) {
+          errorMessage = "Este email ya está registrado";
+        } else if (signUpError.message.includes("Database error")) {
+          errorMessage =
+            "Error en la base de datos. Por favor contacta al administrador.";
+        } else {
+          // Mensaje de error más específico si está disponible
+          errorMessage =
+            signUpError.message || "Error desconocido al registrarse";
+        }
+
+        throw new Error(errorMessage);
+      }
 
       // Si el registro es exitoso, mostrar mensaje y cambiar a modo login
       setError(

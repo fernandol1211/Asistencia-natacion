@@ -14,7 +14,7 @@ import AthleteList from "./AthleteList";
 import type { HorarioUI, AtletaUI } from "@/types";
 
 interface AttendanceCardProps {
-  profesorId: number | null;
+  profesorId: string | null;
   onLogout: () => void;
   selectedDate: string;
   onDateChange: (date: string) => void;
@@ -22,7 +22,7 @@ interface AttendanceCardProps {
   selectedHorario: HorarioUI | null;
   onHorarioChange: (horario: HorarioUI | null) => void;
   atletas: AtletaUI[];
-  toggleAsistencia: (id: number) => void;
+  toggleAsistencia: (id: string) => void;
   toggleAllAsistencias: () => void;
   atletasPresentes: number;
   totalAtletas: number;
