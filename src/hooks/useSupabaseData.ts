@@ -6,7 +6,30 @@ import type {
   HorarioUI,
   AtletaConAsistencia,
 } from "@/types";
-//dd
+
+// Tipos para las respuestas de Supabase
+interface HorarioSupabaseResponse {
+  id: string;
+  dia_semana: string;
+  hora_inicio: string;
+  hora_fin: string;
+  horarios_grupos: { grupos: GrupoDB[] }[] | null; // Array de arrays
+  profesores_horarios: { profesores: ProfesorDB[] }[] | null; // Array de arrays
+}
+
+interface AtletaSupabaseResponse {
+  id: string;
+  nombre: string;
+  apellido: string;
+  grupo_id: string | null;
+  grupos: GrupoDB[] | null; // Ahora es un array
+}
+
+interface AsistenciaSupabaseResponse {
+  atleta_id: string;
+  presente: boolean;
+}
+
 // Hook para obtener grupos
 export function useGrupos() {
   const [grupos, setGrupos] = useState<GrupoDB[]>([]);
@@ -59,7 +82,7 @@ export function useHorarios() {
           dia_semana,
           hora_inicio,
           hora_fin,
-          grupos_horarios ( grupos (id, nombre, nivel) ),
+          horarios_grupos ( grupos (id, nombre, nivel) ),
           profesores_horarios ( profesores (id, nombre) )
         `);
 
@@ -68,14 +91,20 @@ export function useHorarios() {
         return;
       }
 
-      // Transformar datos
-      const transformed: HorarioUI[] = (data || []).map((h: any) => ({
+      // Transformar datos con tipos específicos - CORREGIDO
+      const transformed: HorarioUI[] = (
+        (data as HorarioSupabaseResponse[]) || []
+      ).map((h) => ({
         id: h.id,
         dia_semana: h.dia_semana,
         hora_inicio: h.hora_inicio,
         hora_fin: h.hora_fin,
-        grupos: h.grupos_horarios.map((g: any) => g.grupos),
-        profesores: h.profesores_horarios.map((p: any) => p.profesores),
+        // Corregir el mapeo: extraer cada grupo individual del array anidado
+        grupos: h.horarios_grupos?.map((hg) => hg.grupos).filter(Boolean) || [],
+        // Corregir el mapeo: extraer cada profesor individual del array anidado
+        profesores:
+          h.profesores_horarios?.map((ph) => ph.profesores).filter(Boolean) ||
+          [],
       }));
 
       setHorarios(transformed);
@@ -100,7 +129,6 @@ export function useAtletasConAsistencia() {
           id,
           nombre,
           apellido,
-          email,
           grupo_id,
           grupos (id, nombre, nivel)
         `);
@@ -122,17 +150,17 @@ export function useAtletasConAsistencia() {
         return;
       }
 
-      // Calcular porcentajes de asistencia
+      // Calcular porcentajes de asistencia con tipos específicos - CORREGIDO
       const atletasConAsistencia: AtletaConAsistencia[] = (
-        atletasData || []
-      ).map((atleta: any) => {
-        const asistencias = (asistenciaData || []).filter(
-          (a: any) => a.atleta_id === atleta.id
-        );
+        (atletasData as AtletaSupabaseResponse[]) || []
+      ).map((atleta) => {
+        const asistencias = (
+          (asistenciaData as AsistenciaSupabaseResponse[]) || []
+        ).filter((a) => a.atleta_id === atleta.id);
 
         const totalClases = asistencias.length;
         const clasesAsistidas = asistencias.filter(
-          (a: any) => a.presente
+          (a) => a.presente === true
         ).length;
         const porcentaje =
           totalClases > 0
@@ -143,9 +171,9 @@ export function useAtletasConAsistencia() {
           id: atleta.id,
           nombre: atleta.nombre,
           apellido: atleta.apellido,
-          email: atleta.email,
-          grupo_id: atleta.grupo_id,
-          grupo: atleta.grupos,
+          grupo_id: atleta.grupo_id || "",
+          // CORRECCIÓN PRINCIPAL: grupo es un objeto individual, no un array
+          grupo: atleta.grupos || null,
           clases_asistidas: clasesAsistidas,
           total_clases: totalClases,
           porcentaje_asistencia: porcentaje,

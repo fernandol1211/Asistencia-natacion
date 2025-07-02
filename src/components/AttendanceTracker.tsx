@@ -28,7 +28,7 @@ export default function AttendanceTracker() {
   );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [profesorId, setProfesorId] = useState<number | null>(null);
+  const [profesorId, setProfesorId] = useState<string | null>(null);
   const [message, setMessage] = useState<MessageType>(null);
   const initialLoadRef = useRef(true);
 
@@ -179,7 +179,7 @@ export default function AttendanceTracker() {
     }
   }, [selectedHorario, selectedDate, fetchAtletas]);
 
-  const toggleAsistencia = (atletaId: number) => {
+  const toggleAsistencia = (atletaId: string) => {
     setAtletas((prev) =>
       prev.map((atleta) =>
         atleta.id === atletaId
