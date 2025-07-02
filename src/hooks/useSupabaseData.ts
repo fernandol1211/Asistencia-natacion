@@ -13,8 +13,8 @@ interface HorarioSupabaseResponse {
   dia_semana: string;
   hora_inicio: string;
   hora_fin: string;
-  horarios_grupos: { grupos: GrupoDB[] }[] | null; // Array de arrays
-  profesores_horarios: { profesores: ProfesorDB[] }[] | null; // Array de arrays
+  horarios_grupos: { grupos: GrupoDB }[] | null; // Cambiado a objeto simple
+  profesores_horarios: { profesores: ProfesorDB }[] | null; // Cambiado a objeto simple
 }
 
 interface AtletaSupabaseResponse {
@@ -22,7 +22,7 @@ interface AtletaSupabaseResponse {
   nombre: string;
   apellido: string;
   grupo_id: string | null;
-  grupos: GrupoDB[] | null; // Ahora es un array
+  grupos: GrupoDB | null; // Cambiado a objeto simple
 }
 
 interface AsistenciaSupabaseResponse {
@@ -70,13 +70,12 @@ export function useProfesores() {
   return { profesores };
 }
 
-// Hook para obtener horarios CORREGIDO
+// Hook para obtener horarios - CORREGIDO
 export function useHorarios() {
   const [horarios, setHorarios] = useState<HorarioUI[]>([]);
 
   useEffect(() => {
     const fetchHorarios = async () => {
-      // Consulta corregida con sintaxis adecuada para relaciones
       const { data, error } = await supabase.from("horarios").select(`
           id,
           dia_semana,
@@ -91,21 +90,33 @@ export function useHorarios() {
         return;
       }
 
-      // Transformar datos con tipos específicos - CORREGIDO
+      // Transformar datos CORREGIDO
       const transformed: HorarioUI[] = (
         (data as HorarioSupabaseResponse[]) || []
-      ).map((h) => ({
-        id: h.id,
-        dia_semana: h.dia_semana,
-        hora_inicio: h.hora_inicio,
-        hora_fin: h.hora_fin,
-        // Corregir el mapeo: extraer cada grupo individual del array anidado
-        grupos: h.horarios_grupos?.map((hg) => hg.grupos).filter(Boolean) || [],
-        // Corregir el mapeo: extraer cada profesor individual del array anidado
-        profesores:
-          h.profesores_horarios?.map((ph) => ph.profesores).filter(Boolean) ||
-          [],
-      }));
+      ).map((h) => {
+        // Extraer grupos como array plano
+        const grupos = h.horarios_grupos
+          ? h.horarios_grupos
+              .map((hg) => hg.grupos)
+              .filter((g): g is GrupoDB => g !== null)
+          : [];
+
+        // Extraer profesores como array plano
+        const profesores = h.profesores_horarios
+          ? h.profesores_horarios
+              .map((ph) => ph.profesores)
+              .filter((p): p is ProfesorDB => p !== null)
+          : [];
+
+        return {
+          id: h.id,
+          dia_semana: h.dia_semana,
+          hora_inicio: h.hora_inicio,
+          hora_fin: h.hora_fin,
+          grupos: grupos,
+          profesores: profesores,
+        };
+      });
 
       setHorarios(transformed);
     };
@@ -116,13 +127,12 @@ export function useHorarios() {
   return { horarios };
 }
 
-// Hook para obtener atletas con asistencia CORREGIDO
+// Hook para obtener atletas con asistencia - CORREGIDO
 export function useAtletasConAsistencia() {
   const [atletas, setAtletas] = useState<AtletaConAsistencia[]>([]);
 
   useEffect(() => {
     const fetchAtletas = async () => {
-      // Consulta corregida
       const { data: atletasData, error: atletasError } = await supabase.from(
         "atletas"
       ).select(`
@@ -138,7 +148,6 @@ export function useAtletasConAsistencia() {
         return;
       }
 
-      // Obtener estadísticas de asistencia
       const { data: asistenciaData, error: asistenciaError } =
         await supabase.from("asistencias").select(`
           atleta_id,
@@ -150,7 +159,7 @@ export function useAtletasConAsistencia() {
         return;
       }
 
-      // Calcular porcentajes de asistencia con tipos específicos - CORREGIDO
+      // Transformación CORREGIDA
       const atletasConAsistencia: AtletaConAsistencia[] = (
         (atletasData as AtletaSupabaseResponse[]) || []
       ).map((atleta) => {
@@ -172,8 +181,7 @@ export function useAtletasConAsistencia() {
           nombre: atleta.nombre,
           apellido: atleta.apellido,
           grupo_id: atleta.grupo_id || "",
-          // CORRECCIÓN PRINCIPAL: grupo es un objeto individual, no un array
-          grupo: atleta.grupos || null,
+          grupo: atleta.grupos, // Ahora es un objeto simple
           clases_asistidas: clasesAsistidas,
           total_clases: totalClases,
           porcentaje_asistencia: porcentaje,
