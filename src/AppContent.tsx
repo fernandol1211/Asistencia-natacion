@@ -1,4 +1,7 @@
+"use client";
+
 import { Routes, Route } from "react-router-dom";
+
 import HomePage from "./pages/HomePage";
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
@@ -15,7 +18,14 @@ export default function AppContent() {
   const { showLogin, setShowLogin, isLoading, session } = useAuth();
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -28,20 +38,31 @@ export default function AppContent() {
         onLoginSuccess={() => {}}
         onRegisterSuccess={() => {}}
       />
+
       <main className="container mx-auto px-3 py-4 sm:px-4 md:px-6 lg:px-8 max-w-7xl">
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/asistencias" element={<AttendanceTracker />} />
-          <Route path="/Asistencia-natacion" element={<AttendanceTracker />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-
-          {/* Nuevas rutas protegidas */}
-          {session && (
+          {/* Rutas para usuarios autenticados */}
+          {session ? (
             <>
+              <Route path="/" element={<DashboardPage />} />
+              <Route
+                path="/Asistencia-natacion"
+                element={<AttendanceTracker />}
+              />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/atletas" element={<AtletasPage />} />
               <Route path="/horarios" element={<HorariosPage />} />
+              {/* Redirigir rutas no autorizadas al dashboard */}
+              <Route path="*" element={<DashboardPage />} />
+            </>
+          ) : (
+            <>
+              {/* Rutas para usuarios no autenticados */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              {/* Redirigir cualquier otra ruta al home */}
+              <Route path="*" element={<HomePage />} />
             </>
           )}
         </Routes>
