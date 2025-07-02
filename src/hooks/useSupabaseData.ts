@@ -7,29 +7,6 @@ import type {
   AtletaConAsistencia,
 } from "@/types";
 
-// Tipos para las respuestas de Supabase
-interface HorarioSupabaseResponse {
-  id: string;
-  dia_semana: string;
-  hora_inicio: string;
-  hora_fin: string;
-  horarios_grupos: { grupos: GrupoDB }[] | null; // Cambiado a objeto simple
-  profesores_horarios: { profesores: ProfesorDB }[] | null; // Cambiado a objeto simple
-}
-
-interface AtletaSupabaseResponse {
-  id: string;
-  nombre: string;
-  apellido: string;
-  grupo_id: string | null;
-  grupos: GrupoDB | null; // Cambiado a objeto simple
-}
-
-interface AsistenciaSupabaseResponse {
-  atleta_id: string;
-  presente: boolean;
-}
-
 // Hook para obtener grupos
 export function useGrupos() {
   const [grupos, setGrupos] = useState<GrupoDB[]>([]);
@@ -70,12 +47,13 @@ export function useProfesores() {
   return { profesores };
 }
 
-// Hook para obtener horarios - CORREGIDO
+// Hook para obtener horarios CORREGIDO
 export function useHorarios() {
   const [horarios, setHorarios] = useState<HorarioUI[]>([]);
 
   useEffect(() => {
     const fetchHorarios = async () => {
+      // Consulta corregida con sintaxis adecuada para relaciones
       const { data, error } = await supabase.from("horarios").select(`
           id,
           dia_semana,
@@ -90,33 +68,15 @@ export function useHorarios() {
         return;
       }
 
-      // Transformar datos CORREGIDO
-      const transformed: HorarioUI[] = (
-        (data as HorarioSupabaseResponse[]) || []
-      ).map((h) => {
-        // Extraer grupos como array plano
-        const grupos = h.horarios_grupos
-          ? h.horarios_grupos
-              .map((hg) => hg.grupos)
-              .filter((g): g is GrupoDB => g !== null)
-          : [];
-
-        // Extraer profesores como array plano
-        const profesores = h.profesores_horarios
-          ? h.profesores_horarios
-              .map((ph) => ph.profesores)
-              .filter((p): p is ProfesorDB => p !== null)
-          : [];
-
-        return {
-          id: h.id,
-          dia_semana: h.dia_semana,
-          hora_inicio: h.hora_inicio,
-          hora_fin: h.hora_fin,
-          grupos: grupos,
-          profesores: profesores,
-        };
-      });
+      // Transformar datos
+      const transformed: HorarioUI[] = (data || []).map((h: any) => ({
+        id: h.id,
+        dia_semana: h.dia_semana,
+        hora_inicio: h.hora_inicio,
+        hora_fin: h.hora_fin,
+        grupos: h.horarios_grupos?.map((g: any) => g.grupos) || [],
+        profesores: h.profesores_horarios?.map((p: any) => p.profesores) || [],
+      }));
 
       setHorarios(transformed);
     };
@@ -127,12 +87,13 @@ export function useHorarios() {
   return { horarios };
 }
 
-// Hook para obtener atletas con asistencia - CORREGIDO
+// Hook para obtener atletas con asistencia CORREGIDO
 export function useAtletasConAsistencia() {
   const [atletas, setAtletas] = useState<AtletaConAsistencia[]>([]);
 
   useEffect(() => {
     const fetchAtletas = async () => {
+      // Consulta corregida
       const { data: atletasData, error: atletasError } = await supabase.from(
         "atletas"
       ).select(`
@@ -148,6 +109,7 @@ export function useAtletasConAsistencia() {
         return;
       }
 
+      // Obtener estadísticas de asistencia
       const { data: asistenciaData, error: asistenciaError } =
         await supabase.from("asistencias").select(`
           atleta_id,
@@ -159,17 +121,17 @@ export function useAtletasConAsistencia() {
         return;
       }
 
-      // Transformación CORREGIDA
+      // Calcular porcentajes de asistencia
       const atletasConAsistencia: AtletaConAsistencia[] = (
-        (atletasData as AtletaSupabaseResponse[]) || []
-      ).map((atleta) => {
-        const asistencias = (
-          (asistenciaData as AsistenciaSupabaseResponse[]) || []
-        ).filter((a) => a.atleta_id === atleta.id);
+        atletasData || []
+      ).map((atleta: any) => {
+        const asistencias = (asistenciaData || []).filter(
+          (a: any) => a.atleta_id === atleta.id
+        );
 
         const totalClases = asistencias.length;
         const clasesAsistidas = asistencias.filter(
-          (a) => a.presente === true
+          (a: any) => a.presente === true
         ).length;
         const porcentaje =
           totalClases > 0
@@ -180,8 +142,8 @@ export function useAtletasConAsistencia() {
           id: atleta.id,
           nombre: atleta.nombre,
           apellido: atleta.apellido,
-          grupo_id: atleta.grupo_id || "",
-          grupo: atleta.grupos, // Ahora es un objeto simple
+          grupo_id: atleta.grupo_id,
+          grupo: atleta.grupos || null,
           clases_asistidas: clasesAsistidas,
           total_clases: totalClases,
           porcentaje_asistencia: porcentaje,
