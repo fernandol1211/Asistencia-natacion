@@ -67,27 +67,9 @@ export default function Header() {
 
           {/* Navegación de escritorio */}
           <nav className="hidden md:flex items-center space-x-6">
-            <Button
-              variant="ghost"
-              className="text-white hover:bg-white/10"
-              onClick={() => handleNavigation("/")}
-            >
-              <Home className="mr-2 h-4 w-4" />
-              Inicio
-            </Button>
-
-            {/* Nuevos enlaces solo para usuarios autenticados */}
-            {session && (
+            {session ? (
               <>
-                <Button
-                  variant="ghost"
-                  className="text-white hover:bg-white/10"
-                  onClick={() => handleNavigation("/asistencias")}
-                >
-                  <ClipboardList className="mr-2 h-4 w-4" />
-                  Asistencias
-                </Button>
-
+                {/* Enlaces para usuarios autenticados */}
                 <Button
                   variant="ghost"
                   className="text-white hover:bg-white/10"
@@ -96,7 +78,14 @@ export default function Header() {
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard
                 </Button>
-
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => handleNavigation("/Asistencia-natacion")}
+                >
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Asistencia Natación
+                </Button>
                 <Button
                   variant="ghost"
                   className="text-white hover:bg-white/10"
@@ -105,7 +94,6 @@ export default function Header() {
                   <Users className="mr-2 h-4 w-4" />
                   Atletas
                 </Button>
-
                 <Button
                   variant="ghost"
                   className="text-white hover:bg-white/10"
@@ -115,24 +103,35 @@ export default function Header() {
                   Horarios
                 </Button>
               </>
+            ) : (
+              <>
+                {/* Enlaces para usuarios no autenticados */}
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => handleNavigation("/")}
+                >
+                  <Home className="mr-2 h-4 w-4" />
+                  Inicio
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => handleNavigation("/about")}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Acerca de
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => handleNavigation("/contact")}
+                >
+                  <Phone className="mr-2 h-4 w-4" />
+                  Contacto
+                </Button>
+              </>
             )}
-
-            <Button
-              variant="ghost"
-              className="text-white hover:bg-white/10"
-              onClick={() => handleNavigation("/about")}
-            >
-              <User className="mr-2 h-4 w-4" />
-              Acerca de
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-white hover:bg-white/10"
-              onClick={() => handleNavigation("/contact")}
-            >
-              <Phone className="mr-2 h-4 w-4" />
-              Contacto
-            </Button>
           </nav>
 
           {/* Botón hamburguesa */}
@@ -154,27 +153,9 @@ export default function Header() {
             {isMenuOpen && (
               <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg border border-gray-200 shadow-lg ring-1 ring-black/5 py-2 z-50 transition-all animate-in slide-in-from-top-2">
                 {/* Navegación móvil */}
-                <button
-                  type="button"
-                  onClick={() => handleNavigation("/")}
-                  className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
-                >
-                  <Home className="h-4 w-4 text-blue-500" />
-                  <span>Inicio</span>
-                </button>
-
-                {/* Nuevos enlaces solo para usuarios autenticados */}
-                {session && (
+                {session ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => handleNavigation("/asistencias")}
-                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
-                    >
-                      <ClipboardList className="h-4 w-4 text-blue-500" />
-                      <span>Asistencias</span>
-                    </button>
-
+                    {/* Enlaces para usuarios autenticados */}
                     <button
                       type="button"
                       onClick={() => handleNavigation("/dashboard")}
@@ -183,7 +164,14 @@ export default function Header() {
                       <LayoutDashboard className="h-4 w-4 text-blue-500" />
                       <span>Dashboard</span>
                     </button>
-
+                    <button
+                      type="button"
+                      onClick={() => handleNavigation("/Asistencia-natacion")}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                    >
+                      <ClipboardList className="h-4 w-4 text-blue-500" />
+                      <span>Asistencia Natación</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleNavigation("/atletas")}
@@ -192,7 +180,6 @@ export default function Header() {
                       <Users className="h-4 w-4 text-blue-500" />
                       <span>Atletas</span>
                     </button>
-
                     <button
                       type="button"
                       onClick={() => handleNavigation("/horarios")}
@@ -202,25 +189,35 @@ export default function Header() {
                       <span>Horarios</span>
                     </button>
                   </>
+                ) : (
+                  <>
+                    {/* Enlaces para usuarios no autenticados */}
+                    <button
+                      type="button"
+                      onClick={() => handleNavigation("/")}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                    >
+                      <Home className="h-4 w-4 text-blue-500" />
+                      <span>Inicio</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNavigation("/about")}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                    >
+                      <User className="h-4 w-4 text-blue-500" />
+                      <span>Acerca de</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNavigation("/contact")}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
+                    >
+                      <Phone className="h-4 w-4 text-blue-500" />
+                      <span>Contacto</span>
+                    </button>
+                  </>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() => handleNavigation("/about")}
-                  className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
-                >
-                  <User className="h-4 w-4 text-blue-500" />
-                  <span>Acerca de</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleNavigation("/contact")}
-                  className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors duration-200"
-                >
-                  <Phone className="h-4 w-4 text-blue-500" />
-                  <span>Contacto</span>
-                </button>
 
                 <div className="border-t my-2"></div>
 
